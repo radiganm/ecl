@@ -1,0 +1,105 @@
+;;;; -*- Mode: Lisp; Syntax: Common-Lisp; indent-tabs-mode: nil -*-
+;;;; vim: set filetype=lisp tabstop=8 shiftwidth=2 expandtab:
+
+;;;
+;;; (c) 2011, Juan Jose Garcia-Ripoll
+;;; (c) 2016, Daniel Kochmański
+;;;
+;;; Set up the test environment.
+;;;
+
+(defpackage :ecl-tests
+  (:use :cl))
+
+(in-package :ecl-tests)
+
+(setf *load-verbose* nil *load-print* nil)
+
+(defvar *ecl-sources*
+  (loop for *default-pathname-defaults* in
+        '(#p"@true_srcdir@/" #p"../../" #p"../../src/")
+        when (probe-file "configure.ac")
+        return *default-pathname-defaults*))
+
+(defvar *here* (merge-pathnames "@builddir@/"))
+(defvar *cache* (merge-pathnames "./cache/" *here*))
+
+(defvar *test-image*
+  (or (ext:getenv "TEST_IMAGE")
+      #+windows (namestring (truename "sys:ecl.exe"))
+      #-windows "@prefix@/bin/ecl"))
+
+#+ecl
+(ext:setenv "ECLDIR" (namestring (truename "SYS:")))
+
+(defvar *test-name* (or (ext:getenv "TEST_NAME") "ecl"))
+(defvar *sandbox* (merge-pathnames "temporary/" *here*))
+
+(defun lisp-system-directory ()
+  (loop with root = (si::get-library-pathname)
+        with lib-name = (format nil "../lib/ecl-~A/" (lisp-implementation-version))
+        for base in (list root (merge-pathnames lib-name root))
+        when (or (probe-file (merge-pathnames "./BUILD-STAMP" base))
+                 (probe-file (merge-pathnames "./COPYING" base)))
+        do (return base)))
+
+(setf (logical-pathname-translations "SYS")
+      (list (list #p"sys:**;*.*"
+                  (merge-pathnames "**/*.*"
+                                   (lisp-system-directory)))))
+
+;;;
+;;; PREPARATION OF DIRECTORIES AND FILES
+;;;
+(defun delete-everything (path)
+  ;; Recursively run through children
+  (labels ((recursive-deletion (path)
+             (mapc #'delete-everything
+                   (directory (merge-pathnames
+                               (make-pathname :name nil
+                                              :type nil
+                                              :directory '(:relative :wild)
+                                              :defaults path)
+                               path)))
+             ;; Delete files
+             (loop for f in (directory (make-pathname :name :wild
+                                                      :type :wild
+                                                      :defaults path))
+                do (delete-file f)
+                finally (delete-file path))))
+    (and (probe-file path)
+         (recursive-deletion path))))
+
+;;;
+;;; RUNNING TESTS
+;;;
+(defun run-tests (suites
+                  &aux (suites (cond
+                                 ((null suites) "make-check")
+                                 ((null (cdr suites)) (car suites))
+                                 (T suites))))
+  ;; Cleanup stray files
+  (delete-everything *sandbox*)
+  (ensure-directories-exist *sandbox*)
+  (unwind-protect 
+       (progn
+         (ext:chdir *sandbox*)
+         (ext:setenv "TEST_IMAGE" *test-image*)
+         (ext:run-program *test-image*
+                          `("-norc"
+                            "-eval" "(print (ext:getenv \"ECLDIR\"))"
+                            "-eval" "(ignore-errors (require :cmp))"
+                            "-load" ,(namestring
+                                      (merge-pathnames
+                                       "tests/doit.lsp" *ecl-sources*))
+                            "-eval" "(in-package cl-test)"
+                            "-eval" ,(format nil "(2am-ecl:run '~a)" suites)
+                            "-eval" "(ext:exit)")
+                          :input nil
+                          :output t
+                          :error :output))
+    (ext:chdir *here*)
+    #+ (or)
+    (format t "~%Known fails: ~%~{~a~%~}~%"
+            '(SEM-SIGNAL-N-PROCESSES
+              SEM-SIGNAL-ONLY-N-PROCESSES))))

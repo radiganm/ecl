@@ -1,0 +1,18 @@
+# -*- Mode: Makefile; indent-tabs-mode: nil -*-
+# vim: set filetype=makefile tabstop=8 shiftwidth=4 expandtab:
+
+ECL=@prefix@/@bindir@/ecl@EXEEXT@
+
+.PHONY: all
+
+all: check
+
+check: config.lsp
+	$(ECL) -norc \
+                -load config.lsp \
+                -eval "(ecl-tests::run-tests '($(TESTS)))" \
+                -eval "(ext:quit)" \
+                2>&1 | tee check.log
+
+clean:
+	rm -rf regressions.log cache
