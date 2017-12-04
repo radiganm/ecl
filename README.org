@@ -1,3 +1,9 @@
+#+TITLE: Embeddable Common-Lisp (ECL)
+#+AUTHOR: Copyright (c) 2015, Daniel Kochmański - TurtleWare
+#+HOMEPAGE: https://common-lisp.net/project/ecl/main.html
+#+LICENSE: GNU Library General Public License, version 2
+#+SPDX-License-Identifier: GPL-2.0
+
 ECL stands for Embeddable Common-Lisp. The ECL project aims to produce
 an implementation of the Common-Lisp language which complies to the ANSI
 X3J13 definition of the language.
