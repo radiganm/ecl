@@ -444,7 +444,7 @@ cl_object_mark_proc(void *addr, struct GC_ms_entry *msp, struct GC_ms_entry *msl
 # ifdef ECL_THREADS
   case t_process:
     MAYBE_MARK(o->process.queue_record);
-    MAYBE_MARK(o->process.start_spinlock);
+    MAYBE_MARK(o->process.start_stop_spinlock);
     MAYBE_MARK(o->process.woken_up);
     MAYBE_MARK(o->process.exit_values);
     MAYBE_MARK(o->process.exit_barrier);
@@ -760,8 +760,10 @@ to_bitmap(void *x, void *y)
 void
 init_alloc(void)
 {
+#ifdef GBC_BOEHM_PRECISE
   union cl_lispunion o;
   struct ecl_cons c;
+#endif
   int i;
   if (alloc_initialized) return;
   alloc_initialized = TRUE;
@@ -995,7 +997,7 @@ init_alloc(void)
     to_bitmap(&o, &(o.process.exit_barrier)) |
     to_bitmap(&o, &(o.process.exit_values)) |
     to_bitmap(&o, &(o.process.woken_up)) |
-    to_bitmap(&o, &(o.process.start_spinlock)) |
+    to_bitmap(&o, &(o.process.start_stop_spinlock)) |
     to_bitmap(&o, &(o.process.queue_record));
   type_info[t_lock].descriptor =
     to_bitmap(&o, &(o.lock.name)) |
@@ -1158,7 +1160,7 @@ wrapped_finalizer(cl_object o, cl_object finalizer)
         */
        GC_finalization_proc ofn;
        void *odata;
-       GC_register_finalizer_no_order(cl_list(2,o,finalizer),
+       GC_REGISTER_FINALIZER_NO_ORDER(cl_list(2,o,finalizer),
                                       (GC_finalization_proc)deferred_finalizer, 0,
                                       &ofn, &odata);
        return;
@@ -1181,7 +1183,7 @@ si_get_finalizer(cl_object o)
   GC_finalization_proc ofn;
   void *odata;
   ecl_disable_interrupts_env(the_env);
-  GC_register_finalizer_no_order(o, (GC_finalization_proc)0, 0, &ofn, &odata);
+  GC_REGISTER_FINALIZER_NO_ORDER(o, (GC_finalization_proc)0, 0, &ofn, &odata);
   if (ofn == 0) {
     output = ECL_NIL;
   } else if (ofn == (GC_finalization_proc)wrapped_finalizer) {
@@ -1189,7 +1191,7 @@ si_get_finalizer(cl_object o)
   } else {
     output = ECL_NIL;
   }
-  GC_register_finalizer_no_order(o, ofn, odata, &ofn, &odata);
+  GC_REGISTER_FINALIZER_NO_ORDER(o, ofn, odata, &ofn, &odata);
   ecl_enable_interrupts_env(the_env);
   @(return output);
 }
@@ -1200,12 +1202,12 @@ ecl_set_finalizer_unprotected(cl_object o, cl_object finalizer)
   GC_finalization_proc ofn;
   void *odata;
   if (finalizer == ECL_NIL) {
-    GC_register_finalizer_no_order(o, (GC_finalization_proc)0,
+    GC_REGISTER_FINALIZER_NO_ORDER(o, (GC_finalization_proc)0,
                                    0, &ofn, &odata);
   } else {
     GC_finalization_proc newfn;
     newfn = (GC_finalization_proc)wrapped_finalizer;
-    GC_register_finalizer_no_order(o, newfn, finalizer,
+    GC_REGISTER_FINALIZER_NO_ORDER(o, newfn, finalizer,
                                    &ofn, &odata);
   }
 }
@@ -1429,7 +1431,7 @@ ecl_alloc_weak_pointer(cl_object o)
   obj->t = t_weak_pointer;
   obj->value = o;
   if (!ECL_FIXNUMP(o) && !ECL_CHARACTERP(o) && !Null(o)) {
-    GC_general_register_disappearing_link((void**)&(obj->value), (void*)o);
+    GC_GENERAL_REGISTER_DISAPPEARING_LINK((void**)&(obj->value), (void*)o);
     si_set_finalizer((cl_object)obj, ECL_T);
   }
   return (cl_object)obj;

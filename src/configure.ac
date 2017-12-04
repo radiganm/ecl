@@ -120,6 +120,22 @@ AC_ARG_WITH(libffi-libdir,
 		  [path to system LIBFFI libraries (overrides prefix)] ),
   [LIBFFI_LIBDIR="$withval"], [])
 
+dnl LIBGC library options
+AC_ARG_WITH(libgc-prefix,
+  AS_HELP_STRING( [--with-libgc-prefix=path],
+                  [prefix for system LIBGC includes and libraries] ),
+  [LIBGC_INCDIR="$withval/include"; LIBGC_LIBDIR="$withval/lib"], [])
+
+AC_ARG_WITH(libgc-incdir,
+  AS_HELP_STRING( [--with-libgc-incdir=path],
+		  [path to system LIBGC includes (overrides prefix)] ),
+  [LIBGC_INCDIR="$withval"], [])
+
+AC_ARG_WITH(libgc-libdir,
+  AS_HELP_STRING( [--with-libgc-libdir=path],
+		  [path to system LIBGC libraries (overrides prefix)] ),
+  [LIBGC_LIBDIR="$withval"], [])
+
 dnl
 AC_ARG_WITH(__thread,
   AS_HELP_STRING( [--with-__thread],
@@ -166,8 +182,8 @@ AC_ARG_WITH(asdf,
 AC_ARG_WITH(defsystem,
   AS_HELP_STRING( [--with-defsystem],
                   [include DEFSYSTEM building facility]
-                  [(yes|builtin|no, default=YES)]),
-  [], [with_defsystem=yes])
+                  [(yes|builtin|no, default=NO)]),
+  [], [with_defsystem=no])
 
 AC_ARG_WITH(cmp,
   AS_HELP_STRING( [--with-cmp],
@@ -236,12 +252,6 @@ AC_ARG_ENABLE(c99complex,
                   [include support for C complex type]
                   [(default=NO)]),
   [enable_c99complex=${enableval}], [enable_c99complex=no])
-
-AC_ARG_ENABLE(hpack,
-  AS_HELP_STRING( [--enable-hpack],
-                  [hierarchical package names]
-                  [(default=YES)]),
-  [enable_hpack=${enableval}], [enable_hpack=yes])
 
 AC_ARG_ENABLE(asmapply,
   AS_HELP_STRING( [--enable-asmapply],
@@ -329,7 +339,7 @@ AC_SUBST(SHARED_LDFLAGS)        dnl Flags for shared libraries linker
 AC_SUBST(BUNDLE_LDFLAGS)        dnl Flags for FASL files linker
 AC_SUBST(EXTRA_OBJS)            dnl Extra *.o files to be compiled into libecl.a
 AC_SUBST(TARGETS, ['bin/ecl$(EXE)'])dnl Versions of ECL to be built 
-AC_SUBST(SUBDIRS, [])           dnl Subdirectories that make should process
+AC_SUBST(SUBDIRS, [c])          dnl Subdirectories that make should process
 AC_SUBST(LIBRARIES, [])         dnl GMP, Boehm's GC, etc
 AC_SUBST(LSP_LIBRARIES)         dnl Libraries produced by lisp translator
 AC_SUBST(LSP_FEATURES, ['*features*']) dnl Symbols to add to *FEATURES* for conditional compilation
@@ -352,6 +362,7 @@ AC_PROG_LN_S          # sets variable LN_S
 AC_PROG_MAKE_SET      # set $(MAKE) if needed
 AC_PROG_RANLIB        # set variable RANLIB
 AC_CHECK_TOOL([AR],[ar]) # set variable AR to appropriate `ar' program
+AC_CHECK_PROGS([CTAGS],[exctags ectags ctags]) # set variable CTAGS to ctags program if found
 AC_CHECK_PROGS([ETAGS],[etags emacs-etags]) # set variable ETAGS to etags program if found
 
 dnl -----------------------------------------------------------------------
@@ -421,7 +432,7 @@ fi
 dnl ----------------------------------------------------------------------
 dnl Configure local GMP if needed
 AC_SUBST(ECL_GMP_HEADER)
-EXTRA_OBJS="${EXTRA_OBJS} c/big.o"
+EXTRA_OBJS="${EXTRA_OBJS} big.o"
 if test "x${with_system_gmp}" = "xno" ; then
   AC_MSG_NOTICE(Configuring included GMP library:)
   test -d gmp && rm -rf gmp
@@ -487,6 +498,22 @@ if test "x$LIBFFI_LIBDIR" != "x"; then
 fi
 CPPFLAGS="$CPPFLAGS $LIBFFI_CPPFLAGS"
 LDFLAGS="$LDFLAGS $LIBFFI_LDFLAGS"
+
+dnl ======================================================================
+dnl LIBGC library
+if test "x$LIBGC_INCDIR" != "x"; then
+  LIBGC_CPPFLAGS="-I$LIBGC_INCDIR"
+fi
+if test "x$LIBGC_LIBDIR" != "x"; then
+  LIBGC_LDFLAGS="-L$LIBGC_LIBDIR"
+  if test "$enable_rpath" = "yes"; then
+    if (echo "$ECL_LDRPATH" | grep '~A') > /dev/null; then
+      LIBGC_LDFLAGS=`echo $ECL_LDRPATH | sed "s,~A,$LIBGC_LIBDIR,"`" $LIBGC_LDFLAGS"
+    fi
+  fi
+fi
+CPPFLAGS="$CPPFLAGS $LIBGC_CPPFLAGS"
+LDFLAGS="$LDFLAGS $LIBGC_LDFLAGS"
 
 dnl =====================================================================
 dnl Checks for libraries
@@ -722,8 +749,9 @@ dnl !!! end autoscan
 AC_CHECK_FUNCS( [nanosleep alarm times select setenv putenv] \
                 [lstat mkstemp sigprocmask isatty tzset] \
 		[gettimeofday getrusage] )
-
-AC_CHECK_FUNCS( [ feenableexcept ] )
+AC_CHECK_FUNC([feenableexcept],
+              [AC_DEFINE(HAVE_FEENABLEEXCEPT,[],[feenableexcept is available])],
+              [AC_MSG_WARN(feenableexcept not provided: disabling floating point exceptions)])
 
 AC_CHECK_FUNCS( [expf logf sqrtf cosf sinf tanf sinhf coshf tanhf] \
 		[floorf ceilf fabsf frexpf ldexpf log1p log1pf log1pl] \
@@ -809,7 +837,7 @@ if test "${with_tcp}" = "builtin"; then
 fi
 if test "${with_tcp}" = "yes"; then
   AC_DEFINE(TCP, [1], [Network streams])
-  EXTRA_OBJS="${EXTRA_OBJS} c/tcp.${OBJEXT}"
+  EXTRA_OBJS="${EXTRA_OBJS} tcp.${OBJEXT}"
   ECL_ADD_LISP_MODULE([sockets])
   LIBS="${LIBS} ${TCPLIBS}"
 fi
@@ -879,11 +907,11 @@ if test "x${enable_unicode}" != "xno"; then
       AC_DEFINE([ECL_UNICODE], [21], [Support for Unicode])
       CHAR_CODE_LIMIT=1114112
       ECL_CHARACTER=$ECL_INT32_T
-      EXTRA_OBJS="$EXTRA_OBJS c/unicode/ucd.o c/unicode/ucd-0000.o c/unicode/ucd-0016.o c/unicode/ucd-0032.o c/unicode/ucd-0048.o c/unicode/ucd-0064.o c/unicode/ucd-0080.o c/unicode/ucd-0096.o"
+      EXTRA_OBJS="$EXTRA_OBJS unicode/ucd.o unicode/ucd-0000.o unicode/ucd-0016.o unicode/ucd-0032.o unicode/ucd-0048.o unicode/ucd-0064.o unicode/ucd-0080.o unicode/ucd-0096.o"
    fi
    if test "${with_unicode_names}" = "yes"; then
       AC_DEFINE([ECL_UNICODE_NAMES], [1], [Link in the database of Unicode names])
-      EXTRA_OBJS="$EXTRA_OBJS c/unicode/ucd_names_char.o c/unicode/ucd_names_codes.o c/unicode/ucd_names_pair.o c/unicode/ucd_names_str.o"
+      EXTRA_OBJS="$EXTRA_OBJS unicode/ucd_names_char.o unicode/ucd_names_codes.o unicode/ucd_names_pair.o unicode/ucd_names_str.o"
    fi
 else
    CHAR_CODE_LIMIT=256
@@ -905,10 +933,6 @@ else
   ECL_INIT_FORM="${with_init_form}"
 fi
 
-if test "${enable_hpack}" = "yes"; then
-   AC_DEFINE([ECL_RELATIVE_PACKAGE_NAMES], [1], [Hierarchical package names])
-fi
-
 AC_CONFIG_FILES([
   bare.lsp
   lsp/load.lsp
@@ -916,6 +940,7 @@ AC_CONFIG_FILES([
   cmp/load.lsp
   ../Makefile
   Makefile
+  c/Makefile
   doc/Makefile
   doc/ecl.man
   doc/ecl-config.man

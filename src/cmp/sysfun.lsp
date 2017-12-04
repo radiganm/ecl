@@ -849,7 +849,7 @@
                             :arg-types arg-types
                             :exact-return-type exact-return-type
                             :multiple-values multiple-values
-                            ;; :side-effects (not (get-sysprop name 'no-side-effects))
+                            ;; :side-effects (not (si:get-sysprop name 'no-side-effects))
                             :one-liner one-liner
                             :expansion expansion)))
     #+(or)
@@ -900,6 +900,7 @@
     ;; iolib.lsp
     read-from-string write-to-string prin1-to-string princ-to-string
     y-or-n-p yes-or-no-p string-to-object dribble ext:make-encoding
+    ext:make-encoding
     ext:load-encoding
     ;; listlib.lsp
     union nunion intersection nintersection set-difference nset-difference
@@ -919,7 +920,6 @@
     deposit-field
     ;; packlib.lsp
     find-all-symbols apropos apropos-list
-    find-relative-package package-parent package-children
     ;; predlib.lsp
     upgraded-array-element-type upgraded-complex-part-type typep subtypep coerce
     do-deftype si::ratiop si::single-float-p si::short-float-p si::double-float-p
@@ -937,7 +937,8 @@
     ;; setf.lsp
     si::do-defsetf si::do-define-setf-method
     ;; process.lsp
-    ext:system
+    ext:run-program
+    ext:terminate-process
     ;; pprint.lsp
     pprint-fill copy-pprint-dispatch pprint-dispatch
     pprint-linear pprint-newline pprint-tab pprint-tabular

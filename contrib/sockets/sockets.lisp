@@ -402,9 +402,9 @@ list of an ip address and a port). If no socket address is provided, send(2)
 will be called instead. Returns the number of octets written."))
 
 
-(defgeneric socket-close (socket)
+(defgeneric socket-close (socket &key abort)
   (:documentation "Close SOCKET.  May throw any kind of error that write(2) would have
-thrown.  If SOCKET-MAKE-STREAM has been called, calls CLOSE on that
+thrown.  If SOCKET-MAKE-STREAM has been called, calls CLOSE using ABORT on that
 stream instead"))
 
 (defgeneric socket-make-stream (socket  &rest args)
@@ -431,7 +431,7 @@ SB-SYS:MAKE-FD-STREAM."))
 (defmethod socket-close-low-level ((socket socket))
   (ff-close (socket-file-descriptor socket)))
 
-(defmethod socket-close ((socket socket))
+(defmethod socket-close ((socket socket) &key abort)
   ;; the close(2) manual page has all kinds of warning about not
   ;; checking the return value of close, on the grounds that an
   ;; earlier write(2) might have returned successfully w/o actually
@@ -450,11 +450,11 @@ SB-SYS:MAKE-FD-STREAM."))
       (cond ((slot-boundp socket 'stream)
              (let ((stream (slot-value socket 'stream)))
                #+threads
-               (close (two-way-stream-input-stream stream))
+               (close (two-way-stream-input-stream stream) :abort abort)
                #+threads
-               (close (two-way-stream-output-stream stream))
+               (close (two-way-stream-output-stream stream) :abort abort)
                #-threads
-               (close stream)) ;; closes fd indirectly
+               (close stream :abort abort)) ;; closes fd indirectly
              (slot-makunbound socket 'stream))
             ((= (socket-close-low-level socket) -1)
              (socket-error "close")))
@@ -487,7 +487,7 @@ safe_buffer_pointer(cl_object x, cl_index size)
 
 ;; FIXME: How bad is manipulating fillp directly?
 (defmethod socket-receive ((socket socket) buffer length
-                           &key oob peek waitall element-type)
+                           &key oob peek waitall (element-type 'ext:byte8))
   (unless (or buffer length) (error "You have to supply either buffer or length!"))
   (let ((buffer (or buffer (make-array length :element-type element-type)))
         (length (or length (length buffer)))
@@ -1039,8 +1039,8 @@ also known as unix-domain sockets."))
     (socket-error "socket-peername"))
   (slot-value socket 'local-path))
 
-(defmethod socket-close ((socket local-socket))
-  (socket-close (slot-value socket 'proxy-socket))
+(defmethod socket-close ((socket local-socket) &key abort)
+  (socket-close (slot-value socket 'proxy-socket) :abort abort)
   (slot-makunbound socket 'local-path))
 
 (defmethod socket-make-stream ((socket local-socket) &rest args)
@@ -1170,7 +1170,8 @@ also known as unix-domain sockets."))
       (socket-error "SetNamedPipeHandleState")
       (setf (slot-value socket 'non-blocking-p) non-blocking-p))))
 
-(defmethod socket-close ((socket named-pipe-socket))
+(defmethod socket-close ((socket named-pipe-socket) &key abort)
+  (declare (ignore abort))
   (let ((fd (socket-file-descriptor socket)))
     (unless (c-inline (fd) (:int) t
                   "
@@ -1244,33 +1245,6 @@ also known as unix-domain sockets."))
 
 (defun dup (fd)
   (ffi:c-inline (fd) (:int) :int "dup(#0)" :one-liner t))
-
-(defun make-stream-from-fd (fd mode &key buffering element-type (external-format :default)
-                            (name "FD-STREAM"))
-  (assert (stringp name) (name) "name must be a string.")
-  (let* ((smm-mode (ecase mode
-                       (:input (c-constant "ecl_smm_input"))
-                       (:output (c-constant "ecl_smm_output"))
-                       (:input-output (c-constant "ecl_smm_io"))
-                       #+:wsock
-                       (:input-wsock (c-constant "ecl_smm_input_wsock"))
-                       #+:wsock
-                       (:output-wsock (c-constant "ecl_smm_output_wsock"))
-                       #+:wsock
-                       (:input-output-wsock (c-constant "ecl_smm_io_wsock"))
-                       ))
-         (external-format (unless (subtypep element-type 'integer) external-format))
-         (stream (ffi:c-inline (name fd smm-mode element-type external-format)
-                               (t :int :int t t)
-                               t
-                               "
-ecl_make_stream_from_fd(#0,#1,(enum ecl_smmode)#2,
-                        ecl_normalize_stream_element_type(#3),
-                        0,#4)"
-                               :one-liner t)))
-    (when buffering
-      (si::set-buffering-mode stream buffering))
-    stream))
 
 (defun auto-close-two-way-stream (stream)
   (declare (si::c-local))

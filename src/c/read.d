@@ -716,18 +716,9 @@ sharp_Y_reader(cl_object in, cl_object c, cl_object d)
   if (read_suppress) {
     @(return ECL_NIL);
   }
-  unlikely_if (!ECL_CONSP(x) || ecl_length(x) < 5) {
-    FEreader_error("Reader macro #Y should be followed by a list",
-                   in, 0);
-  }
 
-  if (ecl_length(x) == 2) {
-    rv = ecl_alloc_object(t_bclosure);
-    rv->bclosure.code = ECL_CONS_CAR(x);
-    x = ECL_CONS_CDR(x);
-    rv->bclosure.lex = ECL_CONS_CAR(x);
-    rv->bclosure.entry = _ecl_bclosure_dispatch_vararg;
-    @(return rv);
+  unlikely_if (!ECL_CONSP(x) || ecl_length(x) < 5) {
+    FEreader_error("Reader macro #Y should be followed by a list", in, 0);
   }
 
   rv = ecl_alloc_object(t_bytecodes);
@@ -883,7 +874,7 @@ sharp_asterisk_reader(cl_object in, cl_object c, cl_object d)
   cl_env_ptr env = ecl_process_env();
   cl_index sp = ECL_STACK_INDEX(env);
   cl_object last, elt, x;
-  cl_index dim, dimcount, i;
+  cl_fixnum dim, dimcount, i;
   cl_object rtbl = ecl_current_readtable();
   enum ecl_chattrib a;
 
@@ -1630,7 +1621,7 @@ do_read_delimited_list(int d, cl_object in, bool proper_list)
   if (!ECL_ANSI_STREAM_P(strm)) {
     value0 = _ecl_funcall2(@'gray::stream-read-line', strm);
     value1 = ecl_nth_value(the_env, 1);
-    if (!Null(value1)) {
+    if (Null(value0) && !Null(value1)) {
       if (!Null(eof_errorp))
         FEend_of_file(strm);
       value0 = eof_value;
@@ -1795,7 +1786,7 @@ do_read_delimited_list(int d, cl_object in, bool proper_list)
   return funcall(5, @'gray::stream-read-sequence', stream, sequence, start, end);
   else
 #endif
-    return si_do_read_sequence(sequence, stream, start, end);
+	  @(return si_do_read_sequence(sequence, stream, start, end));
   @)
 
 

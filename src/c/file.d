@@ -1099,10 +1099,8 @@ utf_8_decoder(cl_object stream)
 static int
 utf_8_encoder(cl_object stream, unsigned char *buffer, ecl_character c)
 {
-  int nbytes;
-  if (c < 0) {
-    nbytes = 0;
-  } else if (c <= 0x7F) {
+  int nbytes = 0;
+  if (c <= 0x7F) {
     buffer[0] = c;
     nbytes = 1;
   } else if (c <= 0x7ff) {
@@ -1626,7 +1624,7 @@ ecl_make_string_input_stream(cl_object strng, cl_index istart, cl_index iend)
   strm->stream.flags = ECL_STREAM_DEFAULT_FORMAT;
   strm->stream.byte_size = 8;
 #else
-  if (ECL_BASE_STRING_P(strng) == t_base_string) {
+  if (ECL_BASE_STRING_P(strng)) {
     strm->stream.format = @':latin-1';
     strm->stream.flags = ECL_STREAM_LATIN_1;
     strm->stream.byte_size = 8;
@@ -2784,10 +2782,12 @@ io_file_get_position(cl_object strm)
   offset = lseek(f, 0, SEEK_CUR);
   ecl_enable_interrupts();
   unlikely_if (offset < 0)
+  {
     if (errno == ESPIPE)
       return(ECL_NIL);
     else
       io_error(strm);
+  }
   if (sizeof(ecl_off_t) == sizeof(long)) {
     output = ecl_make_integer(offset);
   } else {
@@ -3075,7 +3075,7 @@ parse_external_format(cl_object stream, cl_object format, int flags)
     return (flags & ~ECL_STREAM_FORMAT) | ECL_STREAM_USER_FORMAT;
   }
   if (ECL_SYMBOLP(format)) {
-    format = si_make_encoding(format);
+    format = _ecl_funcall2(@'ext::make-encoding', format);
     if (ECL_SYMBOLP(format))
       goto PARSE_SYMBOLS;
     stream->stream.format_table = format;
@@ -3099,7 +3099,9 @@ set_stream_elt_type(cl_object stream, cl_fixnum byte_size, int flags,
     flags &= ~ECL_STREAM_SIGNED_BYTES;
     t = @'unsigned-byte';
   }
-  flags = parse_external_format(stream, external_format, flags);
+  if (external_format != ECL_NIL) {
+    flags = parse_external_format(stream, external_format, flags);
+  }
   stream->stream.ops->read_char = eformat_read_char;
   stream->stream.ops->write_char = eformat_write_char;
   switch (flags & ECL_STREAM_FORMAT) {
@@ -3264,12 +3266,10 @@ si_stream_external_format_set(cl_object stream, cl_object format)
 #endif
     {
       cl_object elt_type = ecl_stream_element_type(stream);
-      unlikely_if (elt_type != @'character' &&
-                   elt_type != @'base-char')
-        FEerror("Cannot change external format"
-                "of binary stream ~A", 1, stream);
-      set_stream_elt_type(stream, stream->stream.byte_size,
-                          stream->stream.flags, format);
+      unlikely_if (elt_type != @'character' && elt_type != @'base-char') {
+        FEerror("Cannot change external format of binary stream ~A", 1, stream);
+      }
+      set_stream_elt_type(stream, stream->stream.byte_size, stream->stream.flags, format);
     }
     break;
   default:
@@ -3879,10 +3879,14 @@ wcon_stream_read_byte8(cl_object strm, unsigned char *c, cl_index n)
     HANDLE h = (HANDLE)IO_FILE_DESCRIPTOR(strm);
     DWORD nchars;
     unsigned char aux[4];
+    WCHAR waux[1];
     for (len = 0; len < n; ) {
       int i, ok;
       ecl_disable_interrupts_env(the_env);
-      ok = ReadConsole(h, &aux, 1, &nchars, NULL);
+      ok = ReadConsoleW(h, waux, 1, &nchars, NULL);
+      if (ok) {
+        nchars = WideCharToMultiByte(GetConsoleCP(), 0, waux, 1, aux, 4, NULL, NULL);
+      }
       ecl_enable_interrupts_env(the_env);
       unlikely_if (!ok) {
         FEwin32_error("Cannot read from console", 0);
@@ -4989,14 +4993,20 @@ cl_streamp(cl_object strm)
  */
 
 cl_object
-si_copy_stream(cl_object in, cl_object out)
+si_copy_stream(cl_object in, cl_object out, cl_object wait)
 {
   ecl_character c;
+  if ((wait == ECL_NIL) && !ecl_listen_stream(in)) {
+    return ECL_NIL;
+  }
   for (c = ecl_read_char(in); c != EOF; c = ecl_read_char(in)) {
     ecl_write_char(c, out);
+    if ((wait == ECL_NIL) && !ecl_listen_stream(in)) {
+      break;
+    }
   }
   ecl_force_output(out);
-  @(return ECL_T);
+  @(return c==EOF);
 }
 
 
@@ -5126,7 +5136,7 @@ ecl_open_stream(cl_object fn, enum ecl_smmode smm, cl_object if_exists,
     FEerror("Illegal stream mode ~S", 1, ecl_make_fixnum(smm));
   }
   if (flags & ECL_STREAM_C_STREAM) {
-    FILE *fp;
+    FILE *fp = 0;
     safe_close(f);
     /* We do not use fdopen() because Windows seems to
      * have problems with the resulting streams. Furthermore, even for
@@ -5264,7 +5274,7 @@ file_listen(cl_object stream, int fileno)
       unlikely_if (!GetConsoleMode(hnd, &cm))
         FEwin32_error("GetConsoleMode() failed", 0);
       if (dw > 0) {
-        PINPUT_RECORD recs = (PINPUT_RECORD)GC_malloc(sizeof(INPUT_RECORD)*dw);
+        PINPUT_RECORD recs = (PINPUT_RECORD)GC_MALLOC(sizeof(INPUT_RECORD)*dw);
         int i;
         unlikely_if (!PeekConsoleInput(hnd, recs, dw, &dw_read))
           FEwin32_error("PeekConsoleInput failed()", 0);
@@ -5314,7 +5324,7 @@ static int
 flisten(cl_object stream, FILE *fp)
 {
   int aux;
-  if (feof(fp))
+  if (feof(fp) || ferror(fp))
     return ECL_LISTEN_EOF;
 #ifdef FILE_CNT
   if (FILE_CNT(fp) > 0)
@@ -5328,7 +5338,8 @@ flisten(cl_object stream, FILE *fp)
   {
     /* regular file */
     ecl_off_t old_pos = ecl_ftello(fp), end_pos;
-    unlikely_if (ecl_fseeko(fp, 0, SEEK_END) != 0)
+    unlikely_if (old_pos == -1 ||
+                 ecl_fseeko(fp, 0, SEEK_END) != 0)
       file_libc_error(@[file-error], stream,
                       "Unable to check file position", 0);
     end_pos = ecl_ftello(fp);

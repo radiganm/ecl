@@ -18,14 +18,14 @@
 #+(and cygwin (not ecl-min))
 (ffi:clines "#include <stdlib.h>")
 
+;;; this is needed by compile.lsp.in
 (defun safe-system (string)
   (cmpnote "Invoking external command:~%  ~A~%" string)
   (let ((result (ext:system string)))
     (unless (zerop result)
       (cerror "Continues anyway."
               "(SYSTEM ~S) returned non-zero value ~D"
-              string result))
-    result))
+              string result))))
 
 (defun save-directory (forms)
   (let ((directory
@@ -42,37 +42,28 @@
 (defmacro with-current-directory (&body forms)
   `(save-directory #'(lambda () ,@forms)))
 
-#+(and cygwin (not ecl-min))
-(defun old-crappy-system (program args)
-  (let* ((command (format nil "~S~{ ~S~}" program args))
-         (base-string-command (si:copy-to-simple-base-string command))
-         (code (ffi:c-inline (base-string-command) (:object) :int
-                  "system((const char*)(#0->base_string.self))":one-liner t)))
-    (values nil code nil)))
-
-(defun safe-run-program (program args)
+(defun safe-run-program (program args &aux result output)
   (cmpnote "Invoking external command:~%  ~A ~{~A ~}" program args)
-  (multiple-value-bind (stream result process)
-      (let* ((*standard-output* ext:+process-standard-output+)
-             (*error-output* ext:+process-error-output+)
-             (program (split-program-options program))
-             (args `(,@(cdr program) ,@args))
-             (program (car program)))
-        (with-current-directory
-            #-(and cygwin (not ecl-min))
-            (ext:run-program program args :input nil :output t :error t :wait t)
-            #+(and cygwin (not ecl-min))
-            (old-crappy-system program args)
-            ))
-    (cond ((null result)
-           (cerror "Continues anyway."
-                   "Unable to execute:~%(RUN-PROGRAM ~S ~S)"
-                   program args result))
-          ((not (zerop result))
-           (cerror "Continues anyway."
-                   "Error code ~D when executing~%(RUN-PROGRAM ~S ~S)"
-                   result program args)))
-    result))
+  (let* ((*standard-output* ext:+process-standard-output+)
+         (*error-output* ext:+process-error-output+)
+         (program (split-program-options program))
+         (args `(,@(cdr program) ,@args))
+         (program (car program)))
+    (with-current-directory
+      #-windows (multiple-value-bind (output-stream return-code)
+                    (si:run-program-inner program args :default)
+                  (setf output (collect-lines output-stream)
+                        result return-code))
+      #+windows (setf result (si:system (format nil "~A~{ ~A~}" program args)))))
+  (cond ((null result)
+         (cerror "Continues anyway."
+                 "Unable to execute:~%(SI:RUN-PROGRAM-INNER ~S ~S NIL)"
+                 program args result))
+        ((not (zerop result))
+         (cerror "Continues anyway."
+                 "Error code ~D when executing~%(SI:RUN-PROGRAM-INNER ~S ~S NIL):~%~{~A~^~%~}"
+                 result program args output)))
+  result)
 
 (defun split-program-options (string)
   (labels ((maybe-push (options current)

@@ -40,12 +40,10 @@
       (c1expr
        `(progn
          (defun ,name ,(reverse arg-variables) ,@body)
-         (si::put-sysprop ',name :callback
-          (list
+         (si:put-sysprop ',name :callback
           (ffi:c-inline () () :object
            ,(format nil "ecl_make_foreign_data(@':pointer-void,0,(void*)~a)" c-name)
-           :one-liner t)))))
-      )))
+           :one-liner t)))))))
 
 (defconstant +foreign-elt-type-codes+
   '((:char . "ECL_FFI_CHAR")

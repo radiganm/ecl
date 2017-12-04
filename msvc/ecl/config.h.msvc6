@@ -102,14 +102,6 @@
 /* We have libffi and can use it                                        */
 /*#undef HAVE_LIBFFI*/
 
-/* We have non-portable implementation of FFI calls			*/
-#ifndef _M_X64
-# define ECL_DYNAMIC_FFI 1
-#endif
-
-/* We use hierarchical package names, like in Allegro CL                */
-#define ECL_RELATIVE_PACKAGE_NAMES 1
-
 /* Use mprotect for fast interrupt dispatch				*/
 /* #undef ECL_USE_MPROTECT */
 #if defined(_MSC_VER) || defined(mingw32)
@@ -163,11 +155,11 @@ typedef unsigned int cl_hashkey;
  * The character type
  */
 #ifdef ECL_UNICODE
-#define	ECL_CHAR_CODE_LIMIT	1114112	/*  unicode character code limit  */
+#define	ECL_CHAR_CODE_LIMIT	65536 /*	unicode character code limit  */
 #else
 #define	ECL_CHAR_CODE_LIMIT	256	/*  unicode character code limit  */
 #endif
-typedef int ecl_character;
+typedef short ecl_character;
 typedef unsigned char ecl_base_char;
 
 /*
@@ -218,10 +210,10 @@ typedef unsigned char ecl_base_char;
 /* #undef HAVE_FLOAT_COMPLEX */
 
 /* Missing integer types */
-#if _MSC_VER < 1900
-typedef char int8_t;
-typedef short int16_t;
-typedef int int32_t;
+#if _MSC_VER < 1600
+typedef signed char int8_t;
+typedef signed short int16_t;
+typedef signed int int32_t;
 typedef unsigned char uint8_t;
 typedef unsigned short uint16_t;
 typedef unsigned int uint32_t;

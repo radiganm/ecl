@@ -114,14 +114,11 @@
   (declare (type float x))
   (if (zerop x)
       ;; Zero is a special case which FLOAT-STRING cannot handle.
-      (cond ((null fdigits)
-             (values ".0" 2 t nil 0))
-            ((zerop fdigits)
-             (values "0." 2 nil t 1))
-            (T
-             (let ((s (make-string (1+ fdigits) :initial-element #\0)))
-               (setf (schar s 0) #\.)
-               (values s (length s) t nil 0))))
+      (cond ((null fdigits)  (values ".0" 2 t nil 0))
+            ((zerop fdigits) (values "0." 2 nil t 1))
+            (T (let ((s (make-string (1+ fdigits) :initial-element #\0)))
+                 (setf (schar s 0) #\.)
+                 (values s (length s) t nil 0))))
       (multiple-value-bind (e string zero?)
           (cond (fdigits
                  (float-to-digits* nil x
@@ -230,7 +227,7 @@
       ;; Note that we have to compute the exponential _every_ _time_ in the loop
       ;; because multiplying just by 10.0l0 every time would lead to a greater
       ;; loss of precission.
-      (let ((ex (round (* exponent #.(log 2l0 10)))))
+      (let ((ex (- (round (* exponent #.(log 2l0 10))) delta)))
         (declare (fixnum ex))
         (if (minusp ex)
             (loop for y of-type long-float
@@ -308,11 +305,13 @@
                   :start (format-directive-start struct)
                   :end (format-directive-end struct))))
 
+(defconstant +format-directive-limit+ (1+ (char-code #\~)))
+
 #+formatter
 (defparameter *format-directive-expanders*
-  (make-array char-code-limit :initial-element nil))
+  (make-array +format-directive-limit+ :initial-element nil))
 (defparameter *format-directive-interpreters*
-  (make-array char-code-limit :initial-element nil))
+  (make-array +format-directive-limit+ :initial-element nil))
 
 (defparameter *default-format-error-control-string* nil)
 (defparameter *default-format-error-offset* nil)
@@ -545,24 +544,24 @@
            (write-string directive stream)
            (interpret-directive-list stream (cdr directives) orig-args args))
           (#-ecl format-directive #+ecl vector
+           (multiple-value-bind
+                 (new-directives new-args)
+               (let* ((code (char-code (format-directive-character directive)))
+                      (function
+                        (and (< code +format-directive-limit+)
+                             (svref *format-directive-interpreters* code)))
+                      (*default-format-error-offset*
+                        (1- (format-directive-end directive))))
+                 (unless function
+                   (error 'format-error
+                          :complaint "Unknown format directive."))
                  (multiple-value-bind
                        (new-directives new-args)
-                     (let ((function
-                            (svref *format-directive-interpreters*
-                                   (char-code (format-directive-character
-                                               directive))))
-                           (*default-format-error-offset*
-                            (1- (format-directive-end directive))))
-                       (unless function
-                         (error 'format-error
-                                :complaint "Unknown format directive."))
-                       (multiple-value-bind
-                             (new-directives new-args)
-                           (funcall function stream directive
-                                    (cdr directives) orig-args args)
-                         (values new-directives new-args)))
-                   (interpret-directive-list stream new-directives
-                                             orig-args new-args)))))
+                     (funcall function stream directive
+                              (cdr directives) orig-args args)
+                   (values new-directives new-args)))
+             (interpret-directive-list stream new-directives
+                                       orig-args new-args)))))
       args))
 
 
@@ -634,11 +633,12 @@
        (values `(write-string ,directive stream)
                more-directives))
       (format-directive
-       (let ((expander
-              (aref *format-directive-expanders*
-                    (char-code (format-directive-character directive))))
-             (*default-format-error-offset*
-              (1- (format-directive-end directive))))
+       (let* ((code (char-code (format-directive-character directive)))
+              (expander
+                (and (< code +format-directive-limit+)
+                     (svref *format-directive-expanders* code)))
+              (*default-format-error-offset*
+                (1- (format-directive-end directive))))
          (if expander
              (funcall expander directive more-directives)
              (error 'format-error
@@ -1363,7 +1363,10 @@
     (t
      (let ((spaceleft w))
        (when (and w (or atsign
-                        (minusp number)))
+                        (minusp number)
+                        #+ieee-floating-point
+                        (and (zerop number)
+                             (minusp (atan number -1)))))
          (decf spaceleft))
        (multiple-value-bind (str len lpoint tpoint)
            (sys::flonum-to-string (abs number) spaceleft d k)
@@ -1389,7 +1392,10 @@
                 t)
                (t
                 (when w (dotimes (i spaceleft) (write-char pad stream)))
-                (if (minusp number)
+                (if (or (minusp number)
+                        #+ieee-floating-point
+                        (and (zerop number)
+                             (minusp (atan number -1))))
                     (write-char #\- stream)
                     (if atsign (write-char #\+ stream)))
                 (when lpoint (write-char #\0 stream))

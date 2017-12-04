@@ -674,6 +674,7 @@ CP
 true_builddir
 true_srcdir
 ETAGS
+CTAGS
 AR
 SET_MAKE
 LN_S
@@ -776,6 +777,9 @@ with_gmp_libdir
 with_libffi_prefix
 with_libffi_incdir
 with_libffi_libdir
+with_libgc_prefix
+with_libgc_incdir
+with_libgc_libdir
 with___thread
 enable_opcode8
 with_cxx
@@ -797,7 +801,6 @@ with_sse
 enable_unicode
 enable_longdouble
 enable_c99complex
-enable_hpack
 enable_asmapply
 enable_smallcons
 enable_gengc
@@ -1462,7 +1465,6 @@ Optional Features:
   --enable-longdouble     include support for long double (yes|no|auto,
                           default=AUTO)
   --enable-c99complex     include support for C complex type (default=NO)
-  --enable-hpack          hierarchical package names (default=YES)
   --enable-asmapply       enable optimizations written in assembler,
                           EXPERIMENTAL (default=NO)
   --enable-smallcons      use small (2 words) cons types. Requires
@@ -1491,6 +1493,12 @@ Optional Packages:
                           path to system LIBFFI includes (overrides prefix)
   --with-libffi-libdir=path
                           path to system LIBFFI libraries (overrides prefix)
+  --with-libgc-prefix=path
+                          prefix for system LIBGC includes and libraries
+  --with-libgc-incdir=path
+                          path to system LIBGC includes (overrides prefix)
+  --with-libgc-libdir=path
+                          path to system LIBGC libraries (overrides prefix)
   --with-__thread         Enable __thread thread-local variables (yes|NO|auto)
                           (supported by NPTL-aware glibc and maybe Windows)
   --with-cxx              build ECL using C++ compiler (default=NO)
@@ -1504,7 +1512,7 @@ Optional Packages:
   --with-asdf             include ASDF building facility (yes|builtin|no,
                           default=YES)
   --with-defsystem        include DEFSYSTEM building facility (yes|builtin|no,
-                          default=YES)
+                          default=NO)
   --with-cmp              build the compiler (yes|builtin|no, default=YES)
   --with-bytecmp          build the bytecodes compiler (yes|builtin|no,
                           default=YES)
@@ -2734,6 +2742,27 @@ fi
 
 
 
+# Check whether --with-libgc-prefix was given.
+if test "${with_libgc_prefix+set}" = set; then :
+  withval=$with_libgc_prefix; LIBGC_INCDIR="$withval/include"; LIBGC_LIBDIR="$withval/lib"
+fi
+
+
+
+# Check whether --with-libgc-incdir was given.
+if test "${with_libgc_incdir+set}" = set; then :
+  withval=$with_libgc_incdir; LIBGC_INCDIR="$withval"
+fi
+
+
+
+# Check whether --with-libgc-libdir was given.
+if test "${with_libgc_libdir+set}" = set; then :
+  withval=$with_libgc_libdir; LIBGC_LIBDIR="$withval"
+fi
+
+
+
 # Check whether --with-__thread was given.
 if test "${with___thread+set}" = set; then :
   withval=$with___thread;
@@ -2809,7 +2838,7 @@ fi
 if test "${with_defsystem+set}" = set; then :
   withval=$with_defsystem;
 else
-  with_defsystem=yes
+  with_defsystem=no
 fi
 
 
@@ -2918,14 +2947,6 @@ else
 fi
 
 
-# Check whether --enable-hpack was given.
-if test "${enable_hpack+set}" = set; then :
-  enableval=$enable_hpack; enable_hpack=${enableval}
-else
-  enable_hpack=yes
-fi
-
-
 # Check whether --enable-asmapply was given.
 if test "${enable_asmapply+set}" = set; then :
   enableval=$enable_asmapply; enable_asmapply=${enableval}
@@ -3020,7 +3041,8 @@ boehm_configure_flags=""
 
 
 						                                                                                                                  TARGETS='bin/ecl$(EXE)'
-                             LSP_FEATURES='*features*'
+SUBDIRS=c
+                            LSP_FEATURES='*features*'
 
 
 # Make sure we can run config.sub.
@@ -4690,6 +4712,48 @@ else
   AR="$ac_cv_prog_AR"
 fi
  # set variable AR to appropriate `ar' program
+for ac_prog in exctags ectags ctags
+do
+  # Extract the first word of "$ac_prog", so it can be a program name with args.
+set dummy $ac_prog; ac_word=$2
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for $ac_word" >&5
+$as_echo_n "checking for $ac_word... " >&6; }
+if ${ac_cv_prog_CTAGS+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  if test -n "$CTAGS"; then
+  ac_cv_prog_CTAGS="$CTAGS" # Let the user override the test.
+else
+as_save_IFS=$IFS; IFS=$PATH_SEPARATOR
+for as_dir in $PATH
+do
+  IFS=$as_save_IFS
+  test -z "$as_dir" && as_dir=.
+    for ac_exec_ext in '' $ac_executable_extensions; do
+  if as_fn_executable_p "$as_dir/$ac_word$ac_exec_ext"; then
+    ac_cv_prog_CTAGS="$ac_prog"
+    $as_echo "$as_me:${as_lineno-$LINENO}: found $as_dir/$ac_word$ac_exec_ext" >&5
+    break 2
+  fi
+done
+  done
+IFS=$as_save_IFS
+
+fi
+fi
+CTAGS=$ac_cv_prog_CTAGS
+if test -n "$CTAGS"; then
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: $CTAGS" >&5
+$as_echo "$CTAGS" >&6; }
+else
+  { $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+fi
+
+
+  test -n "$CTAGS" && break
+done
+ # set variable CTAGS to ctags program if found
 for ac_prog in etags emacs-etags
 do
   # Extract the first word of "$ac_prog", so it can be a program name with args.
@@ -4875,7 +4939,7 @@ THREAD_CFLAGS=''
 THREAD_LIBS=''
 THREAD_GC_FLAGS='--enable-threads=posix'
 INSTALL_TARGET='install'
-THREAD_OBJ="$THREAD_OBJ c/threads/process c/threads/queue c/threads/mutex c/threads/condition_variable c/threads/semaphore c/threads/barrier c/threads/mailbox"
+THREAD_OBJ="$THREAD_OBJ threads/process threads/queue threads/mutex threads/condition_variable threads/semaphore threads/barrier threads/mailbox"
 clibs='-lm'
 SONAME=''
 SONAME_LDFLAGS=''
@@ -4981,7 +5045,7 @@ LSP_FEATURES="(cons :android ${LSP_FEATURES})"
                 BUNDLE_LDFLAGS="-dy -G ${LDFLAGS}"
                 ECL_LDRPATH='-Wl,-R,~A'
                 TCPLIBS='-lsocket -lnsl -lintl'
-                clibs='${clibs} -ldl'
+                clibs="${clibs} -ldl"
                 SONAME="${SHAREDPREFIX}ecl.${SHAREDEXT}.SOVERSION"
                 SONAME_LDFLAGS="-Wl,-soname,SONAME"
                 if test "x$GCC" = "xyes"; then
@@ -5031,7 +5095,7 @@ LSP_FEATURES="(cons :android ${LSP_FEATURES})"
                 PICFLAG='-fPIC -fno-common'
                 SHARED_LDFLAGS="-dynamiclib -flat_namespace -undefined suppress ${LDFLAGS}"
                 BUNDLE_LDFLAGS="-bundle ${LDFLAGS}"
-                ECL_LDRPATH=''
+                ECL_LDRPATH='-Wl,-rpath,~A'
                 THREAD_CFLAGS='-D_THREAD_SAFE'
                 THREAD_LIBS='-lpthread'
                 # The GMP library has not yet been ported to Intel-OSX
@@ -5058,7 +5122,7 @@ LSP_FEATURES="(cons :android ${LSP_FEATURES})"
                   ECL_GC_DIR=bdwgc
                 fi
                 SONAME="${SHAREDPREFIX}ecl.SOVERSION.${SHAREDEXT}"
-                SONAME_LDFLAGS="-Wl,-install_name,@libdir\@/SONAME -Wl,-compatibility_version,${PACKAGE_VERSION}"
+                SONAME_LDFLAGS="-Wl,-install_name,@rpath/SONAME -Wl,-compatibility_version,${PACKAGE_VERSION}"
                 ;;
         nsk*)
                 # HP Non-Stop platform
@@ -5638,7 +5702,7 @@ else
 fi
 
 
-EXTRA_OBJS="${EXTRA_OBJS} c/big.o"
+EXTRA_OBJS="${EXTRA_OBJS} big.o"
 if test "x${with_system_gmp}" = "xno" ; then
   { $as_echo "$as_me:${as_lineno-$LINENO}: Configuring included GMP library:" >&5
 $as_echo "$as_me: Configuring included GMP library:" >&6;}
@@ -5725,6 +5789,20 @@ if test "x$LIBFFI_LIBDIR" != "x"; then
 fi
 CPPFLAGS="$CPPFLAGS $LIBFFI_CPPFLAGS"
 LDFLAGS="$LDFLAGS $LIBFFI_LDFLAGS"
+
+if test "x$LIBGC_INCDIR" != "x"; then
+  LIBGC_CPPFLAGS="-I$LIBGC_INCDIR"
+fi
+if test "x$LIBGC_LIBDIR" != "x"; then
+  LIBGC_LDFLAGS="-L$LIBGC_LIBDIR"
+  if test "$enable_rpath" = "yes"; then
+    if (echo "$ECL_LDRPATH" | grep '~A') > /dev/null; then
+      LIBGC_LDFLAGS=`echo $ECL_LDRPATH | sed "s,~A,$LIBGC_LIBDIR,"`" $LIBGC_LDFLAGS"
+    fi
+  fi
+fi
+CPPFLAGS="$CPPFLAGS $LIBGC_CPPFLAGS"
+LDFLAGS="$LDFLAGS $LIBGC_LDFLAGS"
 
 
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking for getpwnam in -lsun" >&5
@@ -5893,7 +5971,7 @@ fi
 
 fi
 
-THREAD_OBJ="$THREAD_OBJ c/threads/rwlock"
+THREAD_OBJ="$THREAD_OBJ threads/rwlock"
 
     boehm_configure_flags="${boehm_configure_flags} ${THREAD_GC_FLAGS}"
     for k in $THREAD_OBJ; do EXTRA_OBJS="$EXTRA_OBJS ${k}.${OBJEXT}"; done
@@ -6160,7 +6238,7 @@ $as_echo "${system_boehm} " >&6; }
    fi
  else
    FASL_LIBS="${FASL_LIBS} -lgc"
-   EXTRA_OBJS="${EXTRA_OBJS} c/alloc_2.${OBJEXT}"
+   EXTRA_OBJS="${EXTRA_OBJS} alloc_2.${OBJEXT}"
 
 $as_echo "#define GBC_BOEHM 1" >>confdefs.h
 
@@ -6189,7 +6267,7 @@ $as_echo "$as_me: Configuring included Boehm GC library:" >&6;}
      ECL_BOEHM_GC_HEADER='ecl/gc/gc.h'
      SUBDIRS="${SUBDIRS} gc"
      CORE_LIBS="-leclgc ${CORE_LIBS}"
-     EXTRA_OBJS="${EXTRA_OBJS} c/alloc_2.${OBJEXT}"
+     EXTRA_OBJS="${EXTRA_OBJS} alloc_2.${OBJEXT}"
      if test "${enable_shared}" = "no"; then
        LIBRARIES="${LIBRARIES} ${LIBPREFIX}eclgc.${LIBEXT}"
      fi
@@ -6323,7 +6401,7 @@ $as_echo "$as_me: Configuring included libffi library:" >&6;}
      ECL_LIBFFI_HEADER='ecl/ffi.h'
      SUBDIRS="${SUBDIRS} libffi"
      CORE_LIBS="-leclffi ${CORE_LIBS}"
-     EXTRA_OBJS="${EXTRA_OBJS} c/alloc_2.${OBJEXT}"
+     EXTRA_OBJS="${EXTRA_OBJS} alloc_2.${OBJEXT}"
      if test "${enable_shared}" = "no"; then
        LIBRARIES="${LIBRARIES} ${LIBPREFIX}eclffi.${LIBEXT}"
      fi
@@ -9309,18 +9387,15 @@ _ACEOF
 fi
 done
 
+ac_fn_c_check_func "$LINENO" "feenableexcept" "ac_cv_func_feenableexcept"
+if test "x$ac_cv_func_feenableexcept" = xyes; then :
 
-for ac_func in  feenableexcept
-do :
-  as_ac_var=`$as_echo "ac_cv_func_$ac_func" | $as_tr_sh`
-ac_fn_c_check_func "$LINENO" "$ac_func" "$as_ac_var"
-if eval test \"x\$"$as_ac_var"\" = x"yes"; then :
-  cat >>confdefs.h <<_ACEOF
-#define `$as_echo "HAVE_$ac_func" | $as_tr_cpp` 1
-_ACEOF
+$as_echo "#define HAVE_FEENABLEEXCEPT /**/" >>confdefs.h
 
+else
+  { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: feenableexcept not declared: disabling floating point exceptions" >&5
+$as_echo "$as_me: WARNING: feenableexcept not declared: disabling floating point exceptions" >&2;}
 fi
-done
 
 
 for ac_func in expf logf sqrtf cosf sinf tanf sinhf coshf tanhf \
@@ -9566,7 +9641,7 @@ if test "${with_tcp}" = "yes"; then
 
 $as_echo "#define TCP 1" >>confdefs.h
 
-  EXTRA_OBJS="${EXTRA_OBJS} c/tcp.${OBJEXT}"
+  EXTRA_OBJS="${EXTRA_OBJS} tcp.${OBJEXT}"
 
 
 LSP_FEATURES="(cons :wants-sockets ${LSP_FEATURES})"
@@ -9692,13 +9767,13 @@ $as_echo "#define ECL_UNICODE 21" >>confdefs.h
 
       CHAR_CODE_LIMIT=1114112
       ECL_CHARACTER=$ECL_INT32_T
-      EXTRA_OBJS="$EXTRA_OBJS c/unicode/ucd.o c/unicode/ucd-0000.o c/unicode/ucd-0016.o c/unicode/ucd-0032.o c/unicode/ucd-0048.o c/unicode/ucd-0064.o c/unicode/ucd-0080.o c/unicode/ucd-0096.o"
+      EXTRA_OBJS="$EXTRA_OBJS unicode/ucd.o unicode/ucd-0000.o unicode/ucd-0016.o unicode/ucd-0032.o unicode/ucd-0048.o unicode/ucd-0064.o unicode/ucd-0080.o unicode/ucd-0096.o"
    fi
    if test "${with_unicode_names}" = "yes"; then
 
 $as_echo "#define ECL_UNICODE_NAMES 1" >>confdefs.h
 
-      EXTRA_OBJS="$EXTRA_OBJS c/unicode/ucd_names_char.o c/unicode/ucd_names_codes.o c/unicode/ucd_names_pair.o c/unicode/ucd_names_str.o"
+      EXTRA_OBJS="$EXTRA_OBJS unicode/ucd_names_char.o unicode/ucd_names_codes.o unicode/ucd_names_pair.o unicode/ucd_names_str.o"
    fi
 else
    CHAR_CODE_LIMIT=256
@@ -9720,13 +9795,7 @@ else
   ECL_INIT_FORM="${with_init_form}"
 fi
 
-if test "${enable_hpack}" = "yes"; then
-
-$as_echo "#define ECL_RELATIVE_PACKAGE_NAMES 1" >>confdefs.h
-
-fi
-
-ac_config_files="$ac_config_files bare.lsp lsp/load.lsp clos/load.lsp cmp/load.lsp ../Makefile Makefile doc/Makefile doc/ecl.man doc/ecl-config.man ecl/configpre.h:h/config.h.in ecl/configpre-int.h:h/config-internal.h.in bin/ecl-config.pre:util/ecl-config lsp/config.lsp:lsp/config.lsp.in compile.pre:compile.lsp.in cmp/cmpdefs.pre:cmp/cmpdefs.lsp tests/config.lsp tests/Makefile"
+ac_config_files="$ac_config_files bare.lsp lsp/load.lsp clos/load.lsp cmp/load.lsp ../Makefile Makefile c/Makefile doc/Makefile doc/ecl.man doc/ecl-config.man ecl/configpre.h:h/config.h.in ecl/configpre-int.h:h/config-internal.h.in bin/ecl-config.pre:util/ecl-config lsp/config.lsp:lsp/config.lsp.in compile.pre:compile.lsp.in cmp/cmpdefs.pre:cmp/cmpdefs.lsp tests/config.lsp tests/Makefile"
 
 
 ac_config_headers="$ac_config_headers ecl/config.h:ecl/configpre.h"
@@ -10430,6 +10499,7 @@ do
     "cmp/load.lsp") CONFIG_FILES="$CONFIG_FILES cmp/load.lsp" ;;
     "../Makefile") CONFIG_FILES="$CONFIG_FILES ../Makefile" ;;
     "Makefile") CONFIG_FILES="$CONFIG_FILES Makefile" ;;
+    "c/Makefile") CONFIG_FILES="$CONFIG_FILES c/Makefile" ;;
     "doc/Makefile") CONFIG_FILES="$CONFIG_FILES doc/Makefile" ;;
     "doc/ecl.man") CONFIG_FILES="$CONFIG_FILES doc/ecl.man" ;;
     "doc/ecl-config.man") CONFIG_FILES="$CONFIG_FILES doc/ecl-config.man" ;;

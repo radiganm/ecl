@@ -140,10 +140,10 @@
       ((? :h :help) tpl-help-command nil
        ":h(elp) or ?    Help.  Type \":help help\" for more information"
        ":help &optional topic                           [Top level command]~@
-        :h &optional topic                              [Abbrevation]~@
+        :h &optional topic                              [Abbreviation]~@
         ~@
         Print information on specified topic.  With no arguments, print~@
-        quick summery of top level commands.~@
+        quick summary of top level commands.~@
         ~@
         Help information for top level commands follows the documentation~@
         style found in \"Common Lisp, the Language\"; and, in general, the~@
@@ -370,7 +370,7 @@
       ((:hs :help-stack) tpl-help-stack-command nil
        ":hs             Help stack"
        ":help-stack                                     [Break command]~@
-        :hs                                             [Abbrevation]~@
+        :hs                                             [Abbreviation]~@
         ~@
         Lists the functions to access the LISP system stacks.~%")
       ((:i :inspect) tpl-inspect-command nil
@@ -398,7 +398,6 @@ The top-level loop of ECL. It is called by default when ECL is invoked."
       (in-package "CL-USER")
 
       (unless (or *lisp-initialized* (null process-command-line))
-        (si:trap-fpe :last t)
         (process-command-args)
         (format t "ECL (Embeddable Common-Lisp) ~A (git:~D)"
                 (lisp-implementation-version)
@@ -1449,11 +1448,12 @@ package."
       (setq *console-owner* mp:*current-process*)
       ;; As of ECL 9.4.1 making a normal function return from the debugger
       ;; seems to be a very bad idea! Basically, it dumps core...
-      (when (listen *debug-io*)
-        (clear-input *debug-io*))
+      (ignore-errors
+        (when (listen *debug-io*)
+          (clear-input *debug-io*)))
       ;; Like in SBCL, the error message is output through *error-output*
       ;; The rest of the interaction is performed through *debug-io*
-      (finish-output)
+      (ignore-errors (finish-output))
       ;; We wrap the following in `ignore-errors' because error may be
       ;; caused by writing to the `*error-output*', what leads to
       ;; infinite recursion!

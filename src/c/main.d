@@ -71,6 +71,7 @@ const char *ecl_self;
 
 static int ARGC;
 static char **ARGV;
+/* INV: see ecl_option enum in external.h */
 cl_fixnum ecl_option_values[ECL_OPT_LIMIT+1] = {
 #ifdef GBC_BOEHM_GENGC
   1,              /* ECL_OPT_INCREMENTAL_GC */
@@ -83,7 +84,6 @@ cl_fixnum ecl_option_values[ECL_OPT_LIMIT+1] = {
   1,              /* ECL_OPT_TRAP_SIGILL */
   1,              /* ECL_OPT_TRAP_SIGBUS */
   1,              /* ECL_OPT_TRAP_SIGPIPE */
-  1,              /* ECL_OPT_TRAP_SIGCHLD */
   1,              /* ECL_OPT_TRAP_INTERRUPT_SIGNAL */
   1,              /* ECL_OPT_SIGNAL_HANDLING_THREAD */
   16,             /* ECL_OPT_SIGNAL_QUEUE_SIZE */
@@ -431,8 +431,6 @@ struct cl_core_struct cl_core = {
   (cl_object)&default_rehash_size_data, /* rehash_size */
   (cl_object)&default_rehash_threshold_data, /* rehash_threshold */
 
-  ECL_NIL, /* external_processes */
-  ECL_NIL, /* external_processes_lock */
   ECL_NIL /* known_signals */
 };
 
@@ -558,43 +556,54 @@ cl_boot(int argc, char **argv)
   cl_core.lisp_package =
     ecl_make_package(str_common_lisp,
                      cl_list(2, str_cl, str_LISP),
+                     ECL_NIL,
                      ECL_NIL);
   cl_core.user_package =
     ecl_make_package(str_common_lisp_user,
                      cl_list(2, str_cl_user, str_user),
-                     ecl_list1(cl_core.lisp_package));
+                     ecl_list1(cl_core.lisp_package),
+                     ECL_NIL);
   cl_core.keyword_package =
-    ecl_make_package(str_keyword, ECL_NIL, ECL_NIL);
+    ecl_make_package(str_keyword, ECL_NIL, ECL_NIL, ECL_NIL);
   cl_core.ext_package =
-    ecl_make_package(str_ext, ECL_NIL,
-                     ecl_list1(cl_core.lisp_package));
+    ecl_make_package(str_ext,
+                     ECL_NIL,
+                     ecl_list1(cl_core.lisp_package),
+                     ECL_NIL);
   cl_core.system_package =
     ecl_make_package(str_si,
                      cl_list(2,str_system,str_sys),
                      cl_list(2,cl_core.ext_package,
-                             cl_core.lisp_package));
+                             cl_core.lisp_package),
+                     ECL_NIL);
   cl_core.c_package =
     ecl_make_package(str_c,
                      ecl_list1(str_compiler),
-                     ecl_list1(cl_core.lisp_package));
+                     ecl_list1(cl_core.lisp_package),
+                     ECL_NIL);
   cl_core.clos_package =
     ecl_make_package(str_clos,
                      ecl_list1(str_mop),
-                     ecl_list1(cl_core.lisp_package));
+                     ecl_list1(cl_core.lisp_package),
+                     ECL_NIL);
   cl_core.mp_package =
     ecl_make_package(str_mp,
                      ecl_list1(str_multiprocessing),
-                     ecl_list1(cl_core.lisp_package));
+                     ecl_list1(cl_core.lisp_package),
+                     ECL_NIL);
 #ifdef ECL_CLOS_STREAMS
-  cl_core.gray_package = ecl_make_package(str_gray, ECL_NIL,
-                                          CONS(cl_core.lisp_package, ECL_NIL));
+  cl_core.gray_package = ecl_make_package(str_gray,
+                                          ECL_NIL,
+                                          ecl_list1(cl_core.lisp_package),
+                                          ECL_NIL);
 #endif
   cl_core.ffi_package =
     ecl_make_package(str_ffi,
                      ECL_NIL,
                      cl_list(3,cl_core.lisp_package,
                              cl_core.system_package,
-                             cl_core.ext_package));
+                             cl_core.ext_package),
+                     ECL_NIL);
 
   ECL_NIL_SYMBOL->symbol.hpack = cl_core.lisp_package;
   cl_import2(ECL_NIL, cl_core.lisp_package);
@@ -930,6 +939,7 @@ si_pointer(cl_object x)
 #if defined(ECL_MS_WINDOWS_HOST)
 void
 ecl_get_commandline_args(int* argc, char*** argv) {
+  /* the caller should use LocalFree to release the memory of strings in argv and argv itself */
   LPWSTR *wArgs;
   int i;
 
@@ -937,10 +947,10 @@ ecl_get_commandline_args(int* argc, char*** argv) {
     return;
 
   wArgs = CommandLineToArgvW(GetCommandLineW(), argc);
-  *argv = (char**)malloc(sizeof(char*)*(*argc));
+  *argv = (char**)LocalAlloc(0, sizeof(char*)*(*argc));
   for (i=0; i<*argc; i++) {
     int len = wcslen(wArgs[i]);
-    (*argv)[i] = (char*)malloc(2*(len+1));
+    (*argv)[i] = (char*)LocalAlloc(0, 2*(len+1));
     wcstombs((*argv)[i], wArgs[i], len+1);
   }
   LocalFree(wArgs);

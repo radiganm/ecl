@@ -31,8 +31,7 @@ ecl_make_cfun(cl_objectfn_fixed c_function, cl_object name, cl_object cblock, in
   cf->cfunfixed.file_position = ecl_make_fixnum(-1);
   cf->cfunfixed.narg = narg;
   if (ecl_unlikely(narg < 0 || narg > ECL_C_ARGUMENTS_LIMIT))
-    FEprogram_error_noreturn("ecl_make_cfun: function requires "
-                             "too many arguments.",0);
+    FEprogram_error("ecl_make_cfun: function requires too many arguments.", 0);
   return cf;
 }
 
@@ -127,12 +126,13 @@ cl_function_lambda_expression(cl_object fun)
   case t_bclosure:
     lex = fun->bclosure.lex;
     fun = fun->bclosure.code;
+    /* fallthrough */
   case t_bytecodes:
     name = fun->bytecodes.name;
     output = fun->bytecodes.definition;
-    if (name == ECL_NIL)
+    if (name == ECL_NIL && output != ECL_NIL)
       output = cl_cons(@'lambda', output);
-    else if (name != @'si::bytecodes')
+    else if (name != @'si::bytecodes' && output != ECL_NIL)
       output = @list*(3, @'ext::lambda-block', name, output);
     break;
   case t_cfun:

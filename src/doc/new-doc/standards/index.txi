@@ -3,11 +3,11 @@
 
 @menu
 * Overview::
-* Syntax::
+@c * Syntax::
 * Evaluation and compilation::
 * Types and classes::
 * Data and control flow::
-* Iteration::
+@c * Iteration::
 * Objects::
 * Structures::
 * Conditions::
@@ -27,39 +27,30 @@
 * Reader::
 * System construction::
 * Environment::
-* Glossary::
+@c * Glossary::
 @end menu
 
 @include standards/overview.txi
 
 @c No changes regarding the standard
-@node Syntax
-@section Syntax
+@c @node Syntax
+@c @section Syntax
 
 @include standards/evaluation.txi
 @include standards/types_and_classes.txi
 @include standards/data_and_control_flow.txi
 
-@node Iteration
-@section Iteration
+@c @node Iteration
+@c @section Iteration
 
-@node Objects
-@section Objects
-
-@node Structures
-@section Structures
-
-@node Conditions
-@section Conditions
-
-@node Symbols
-@section Symbols
-
-@node Packages
-@section Packages
-
-@node Numbers
-@section Numbers
+@include standards/objects.txi
+@include standards/structures.txi
+@include standards/conditions.txi
+@include standards/symbols.txi
+@include standards/packages.txi
+@include standards/numbers.txi
+@c @node Numbers
+@c @section Numbers
 @c build option --with-ieee-fp={yes|no}
 @c si::trap-fpe
 @c si::nan
@@ -73,46 +64,21 @@
 @c ext:random-state-array
 @c #$ macro
 
-@node Characters
-@section Characters
+@include standards/characters.txi
+@include standards/conses.txi
+@include standards/arrays.txi
+@include standards/strings.txi
+@include standards/sequences.txi
+@include standards/hashtables.txi
+@include standards/filenames.txi
+@include standards/files.txi
+@include standards/streams.txi
+@include standards/printer.txi
+@include standards/reader.txi
+@c @c #$ - random state
 
-@node Conses
-@section Conses
+@include standards/sys-constr.txi
 
-@node Arrays
-@section Arrays
-
-@node Strings
-@section Strings
-
-@node Sequences
-@section Sequences
-
-@node Hash tables
-@section Hash tables
-@c weakness in hash tables
-@c ext:hash-table-content
-@c ext:hash-table-fill
-@c ext:hash-table-weakness
-
-@node Filenames
-@section Filenames
-
-@node Files
-@section Files
-
-@node Streams
-@section Streams
-
-@node Printer
-@section Printer
-
-@node Reader
-@section Reader
-@c #$ - random state
-
-@node System construction
-@section System construction
 @c ext:*load-hooks*, si::*load-search-list* variable:
 
 @c EXT:*LOAD-HOOKS* is an assoc array of form ((TYPE . LOAD-FUNCTION)),
@@ -142,8 +108,7 @@
 @c directory, it will be treated as a source code. Otherwise we'll try
 @c known extensions.
 
-@node Environment
-@section Environment
+@include standards/environment.txi
 
-@node Glossary
-@section Glossary
+@c @node Glossary
+@c @section Glossary

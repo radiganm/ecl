@@ -16,12 +16,14 @@
                          (:file "mixed")
                          (:file "compiler")
                          (:file "executable-cli")
+                         (:file "run-program")
                          (:file "multiprocessing" :if-feature :threads)
                          (:file "embedding" :if-feature (:not :ecl-bytecmp))
                          (:file "foreign-interface" :if-feature :ffi)
                          (:file "metaobject-protocol" :if-feature :clos)
                          (:file "ieee-fp" :if-feature :ieee-floating-point)
-                         (:file "package-locks" :if-feature :package-locks)
+                         (:file "package-extensions")
+			 (:file "hash-tables")
                          (:file "external-formats" :if-feature :unicode)))
                (:module stress-tests
                         :default-component-class asdf:cl-source-file.lsp

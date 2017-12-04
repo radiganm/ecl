@@ -150,7 +150,7 @@ cl_funcall(cl_narg narg, cl_object function, ...)
       } else loop_for_in (lastarg) {
           if (ecl_unlikely(i >= ECL_CALL_ARGUMENTS_LIMIT)) {
             ecl_stack_frame_close(frame);
-            FEprogram_error_noreturn("CALL-ARGUMENTS-LIMIT exceeded",0);
+            FEprogram_error("CALL-ARGUMENTS-LIMIT exceeded",0);
           }
           ecl_stack_frame_push(frame, CAR(lastarg));
           i++;
@@ -224,12 +224,6 @@ cl_eval(cl_object form)
     if (ECL_CONS_CAR(form) == @'quote') {
       return cl_second(form);
     }
-    /* value = cl_macroexpand(2, form, env); */
-    /* if (value != form) { */
-    /*   form = value; */
-    /*   goto AGAIN; */
-    /* } */
-  ERROR:
     FEerror("EXT:CONSTANT-FORM-VALUE invoked with a non-constant form ~A",
             0, form);
     break;

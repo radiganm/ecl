@@ -564,8 +564,8 @@
    (let ((warn nil))
      (with-dflet ((c::cmpwarn (setf warn t)))
        (with-compiler ("aux-compiler.0104.lsp")
-         '(defconstant foo (list 1 2 3))
-         '(print foo)))
+         '(defconstant +foo+ (list 1 2 3))
+         '(print +foo+)))
      (delete-file "aux-compiler.0104.lsp")
      (delete-file (compile-file-pathname "aux-compiler.0104.lsp" :type :fas))
      warn)))
@@ -1167,3 +1167,125 @@
 ;;;    type RANDOM-TYPE
 (test cmp.0051.make-load-form.random-state
   (finishes (make-load-form (make-random-state))))
+
+
+;;; Date 2016-12-20
+;;; Reported by Paul F. Dietz
+;;; Description
+;;;
+;;;    Order of VALUES evaluation in compiled code is wrong.
+;;;
+;;; Bug https://gitlab.com/embeddable-common-lisp/ecl/issues/330
+(ext:with-clean-symbols (f2)
+  (test cmp.0052.values-evaluation-order
+    (defun f2 (a) (lcm (values a (setq a 1))))
+    (is-eql 10 (f2 10))
+    (compile 'f2)
+    (is-eql 10 (f2 10))))
+
+;;; Date 2017-06-27
+;;; Reported by Fabrizio Fabbri
+;;; Description
+;;;
+;;;    Compiled function drop argument type checkin
+;;;    on constant.
+;;;
+;;; Bug https://gitlab.com/embeddable-common-lisp/ecl/issues/353
+(test cmp.0053.check-values-type-on-constant
+      (handler-case 
+          (funcall (compile nil
+                            '(lambda () (rplaca 'A 1))))
+        (simple-type-error () t)
+        (error () nil)
+        (:no-error (v) (declare (ignore v)) nil)))
+
+;;; Date 2017-06-28
+;;; Reported by Fabrizio Fabbri
+;;; Description
+;;;
+;;;    Compiled assoc does not check that alist argument
+;;;    is a valid association list.
+;;;
+;;; Bug https://gitlab.com/embeddable-common-lisp/ecl/issues/353
+(test cmp.0054.invalid-argument-type
+      (handler-case 
+          (funcall (compile nil
+                            '(lambda () (assoc 'z '((a . b) :bad (c . d))))))
+        (simple-type-error () t)
+        (error () nil)
+        (:no-error (v) (declare (ignore v)) nil)))
+
+;;; Date 2017-07-05
+;;; Reported by Fabrizio Fabbri
+;;; Description
+;;;
+;;;    Compiled vector-push and vector-push-extend
+;;;    does not check for invalid argument and
+;;;    SIGSEGV
+;;;
+;;; Bug https://gitlab.com/embeddable-common-lisp/ecl/issues/353
+(test cmp.0055.invalid-argument-type
+  (is-true
+   (handler-case
+       (funcall (compile nil
+                         '(lambda () (vector-push))))
+     (program-error () t)
+     (error () nil)
+     (:no-error (v) (declare (ignore v)) nil))))
+
+;;; Date 2017-08-10
+;;; Description
+;;;
+;;;    On some platforms (without feenableexcept) compiling code with
+;;;    constants being infinity cause fpe-exception.
+(test cmp.0056.artificial-fpe
+  (finishes
+    (funcall (compile nil
+                      '(lambda ()
+                        (eql 10d0 ext:double-float-positive-infinity))))))
+
+;;; Date 2017-08-10
+;;; Description
+;;;
+;;;    Confirm, that malformed code compiles (errors should be issued
+;;;    at runtime).
+(test cmp.0057.expand
+  (let (fun)
+    ;; expand-mapcar
+    (is (setf fun (compile nil '(lambda () (mapcar)))))
+    (signals program-error (funcall fun))
+    ;; expand-vector-push
+    (is (setf fun (compile nil '(lambda () (vector-push)))))
+    (signals program-error (funcall fun))))
+
+;;; Date 2017-08-16
+;;;
+;;; Description
+;;;
+;;;    `si:coerce-to-vector' (called from cmpopt) had invalid
+;;;    check-type statements preventing compilation of valid code.
+(test cmp.0058.coerce-expand
+  (finishes (load (with-compiler ("aux-compiler.0058-coerce.lsp")
+                    '(defun flesh-failures ()
+                      (load-time-value
+                       (coerce #(0) '(simple-array (unsigned-byte 8) (1)))))))))
+
+;;; Date 2017-09-29
+;;;
+;;; Description
+;;;
+;;;   `typep' compiler macroexpansion did treat
+;;;   `gray:fundamental-stream' as subtype of `ext:ansi-stream'.
+(test cmp.0059.gray-is-not-ansi
+  (let ((stream (make-instance 'gray:fundamental-stream)))
+    (is-false (typep stream 'ext:ansi-stream))))
+
+;;; Date 2017-11-21
+;;; Description
+;;;
+;;;   loop on dotted lists with destructuring bind gave a type error
+;;;
+;;; Bug https://gitlab.com/embeddable-common-lisp/ecl/issues/418
+(test cmp.0060.loop-on-dotted-list
+  (finishes (funcall (compile nil
+                              '(lambda () (loop for (i) on '(1 2 . 3)))))))

@@ -1989,6 +1989,15 @@ Creates and returns a random-state object.  If RANDOM-STATE is NIL, copies the
 value of *RANDOM-STATE*.  If RANDOM-STATE is a random-state, copies it.  If
 RANDOM-STATE is T, creates a random-state randomly.")
 
+(docfun ext:make-stream-from-fd function
+        (fd direction &key buffering element-type (external-format :default) (name "FD-STREAM")) "
+Creates and returns a new stream build on top of given FD file descriptor.
+
+DIRECTION may be :INPUT, :OUTPUT and :IO. On Windows it may be
+also :INPUT-WSOCK, :OUTPUT-WSOCK, :IO-WSOCK and :IO-WCON.
+
+BUFFERING may be :NONE, :LINE and :FULL.")
+
 (docfun make-string function (length &key (initial-element #\Space)) "
 Creates and returns a new string of the given LENGTH, whose elements are all
 INITIAL-ELEMENT.")
@@ -2237,21 +2246,21 @@ Returns T if INTEGER is an odd number; NIL otherwise.")
 
 (docfun open function (filespec &key (direction :input) element-type
                      if-exists if-does-not-exist) "
-Opens the specified file and returns a file stream to/from the file.  FILESPEC
-may be a symbol, a string, a pathname, or a file stream.  DIRECTION may be
-:INPUT, :OUTPUT, :IO, or :PROBE.  ELEMENT-TYPE is simply ignored in ECL.  IF-
-EXISTS specifies what to do when DIRECTION is either :OUTPUT or :IO and the
-specified file exists already.  It may be :ERROR (the default), :NEW-VERSION,
-:RENAME, :RENAME-AND-DELETE, :OVERWRITE, :APPEND, :SUPERSEDE, or NIL.  IF-
-DOES-NOT-EXIST specifies what to do when the specified file does not exists.
-It may be :ERROR (the default when DIRECTION is :INPUT), :CREATE (the default
-when DIRECTION is either :OUTPUT or :IO), or NIL.
-File streams are notated in one of the following ways:
-        #<input stream f>
-        #<output stream f>
-        #<io stream f>
-        #<probe stream f>
-where F is the file name.")
+Opens the specified file and returns a file stream to/from the file.
+
+FILESPEC may be a symbol, a string, a pathname, or a file stream.
+
+DIRECTION may be :INPUT, :OUTPUT, :IO, or :PROBE.
+
+IF-EXISTS specifies what to do when DIRECTION is either :OUTPUT or :IO
+and the specified file exists already.  It may be :ERROR (the
+default), :NEW-VERSION, :RENAME, :RENAME-AND-DELETE, :OVERWRITE, :APPEND,
+:SUPERSEDE, or NIL.
+
+IF-DOES-NOT-EXIST specifies what to do when the specified file does
+not exists.  It may be :ERROR (the default when DIRECTION
+is :INPUT), :CREATE (the default when DIRECTION is either :OUTPUT
+or :IO), or NIL.")
 
 (docfun ext:make-pipe function ()
 "Creates a pipe in the form of a two-way stream that can be used for
@@ -2274,6 +2283,28 @@ built-in packages:
         keyword  keyword symbols.
         system   system internal symbols.  Has nicknames SYS and SI.
         compiler system internal symbols for the ECL compiler.")
+
+(docfun ext:package-local-nicknames function
+        (package-designator) "
+Returns an alist of (LOCAL-NICKNAME . ACTUAL-PACKAGE)
+describing the nicknames local to the designated package.")
+
+(docfun ext:package-locally-nicknamed-by-list function
+        (package-designator) "
+Returns a list of packages which have a local nickname for the
+designated package.")
+
+(docfun ext:add-package-local-nickname function
+        (local-nickname actul-package &optional package-designator) "
+Adds LOCAL-NICKNAME for ACTUAL-PACKAGE in the designated package,
+defaulting to current package. LOCAL-NICKNAME must be a string
+designator, and ACTUAL-PACKAGE must be a package designator.")
+
+(docfun ext:remove-package-local-nickname function
+        (old-nickname &optional package-designator) "
+If the designated package had OLD-NICKNAME as a local nickname
+for another package, it is removed. Returns true if the nickname
+existed and was removed, and NIL otherwise.")
 
 (docfun package-name function (package) "
 Returns the name of PACKAGE as a string.")
@@ -3225,6 +3256,60 @@ Outputs STRING to STREAM.  Returns STRING.")
 
 (docfun zerop function (number) "
 Returns T if the arg is zero; NIL otherwise.")
+
+;;; ----------------------------------------------------------------------
+;;; Multi Processing (POSIX Threads)
+
+#+threads
+(progn
+  (docfun mp:all-processes function () "
+Returns a list of all running processes.")
+
+  (docfun mp:make-process function (&key name) "
+Allocates new process.")
+
+  (docfun mp:process-yield function () "
+Causes current process to yield the control.")
+
+  (docfun mp:exit-process function () "
+Exits current process.")
+
+  (docfun mp:process-active-p function (process) "
+Returns T if the process is active; NIL otherwise.")
+
+  (docfun mp:process-enable function (process) "
+Starts a process. If process is already enabled signals error.")
+
+  (docfun mp:interrupt-process function (process function) "
+Interrupts active PROCESS to call FUNCTION. When FUNCTION
+finishes normal normal execution is resumed.")
+
+  (docfun mp:process-kill function (process) "
+Exits running PROCESS. If PROCESS is inactive signals error.")
+
+  (docfun mp:process-suspend function (process) "
+Stops running PROCESS. If PROCESS is inactive signals error.")
+
+  (docfun mp:process-suspend function (process) "
+Resumes running PROCESS. If PROCESS is inactive signals error.")
+
+  (docfun mp:process-name function (process) "
+Returns PROCESS name assigned on MP:MAKE-PROCESS call.")
+
+  (docfun mp:process-preset function (process function &rest args) "
+Initializes a process. When process is enabled it will call FUNCTION
+with ARGS.")
+
+  (docfun mp:process-whostate function (process) "
+Reserved for future use. Returns empty string.")
+
+  (docfun mp:process-join function (process) "
+Waits until process stops its execution.")
+
+  (docfun mp:process-run-function function (name function &rest args) "
+Equivalent to creating a process with MP:MAKE-PROCESS, presetting it
+with MP:PROCESS-PRESET and starting with MP:PROCESS-ENABLE. Returns
+created process."))
 
 #||
 ;;; ----------------------------------------------------------------------

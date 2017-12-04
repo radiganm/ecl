@@ -11,11 +11,6 @@
 #else
 # define ECL_NAME(x) NULL
 #endif
-#ifdef ECL_RELATIVE_PACKAGE_NAMES
-# define RELATIVE_PACKAGES_P ECL_T
-#else
-# define RELATIVE_PACKAGES_P ECL_NIL
-#endif
 #ifdef DPP
 #define CLOS_ "CLOS::"
 #define EXT_ "EXT::"
@@ -56,11 +51,6 @@ typedef struct {
 # define IF_PROFILE(x) x
 #else
 # define IF_PROFILE(x) NULL
-#endif
-#ifdef ECL_RELATIVE_PACKAGE_NAMES
-# define IF_RELPACK(x) x
-#else
-# define IF_RELPACK(x) NULL
 #endif
 #ifndef ECL_CLOS_STREAMS
 # undef GRAY_
@@ -1162,6 +1152,7 @@ cl_symbols[] = {
 {EXT_ "FILE-KIND","si_file_kind"},
 {SYS_ "FILL-POINTER-SET","si_fill_pointer_set"},
 {EXT_ "FILE-STREAM-FD","si_file_stream_fd"},
+{EXT_ "MAKE-STREAM-FROM-FD",NULL},
 {EXT_ "FIXNUMP","si_fixnump"},
 {SYS_ "FORMAT-ERROR",NULL},
 #ifdef ECL_CMU_FORMAT
@@ -1207,7 +1198,7 @@ cl_symbols[] = {
 {EXT_ "MKSTEMP","si_mkstemp"},
 {SYS_ "RMDIR","si_rmdir"},
 {EXT_ "MAKE-PIPE","si_make_pipe"},
-/* PACKAGE_LOCKS */
+/* package extensions */
 {SYS_ "*IGNORE-PACKAGE-LOCKS*",NULL},
 {EXT_ "PACKAGE-LOCK","si_package_lock"},
 {SYS_ "LOCK-PACKAGE",NULL},
@@ -1215,7 +1206,12 @@ cl_symbols[] = {
 {SYS_ "PACKAGE-LOCKED-P",NULL},
 {SYS_ "WITHOUT-PACKAGE-LOCKS",NULL},
 {SYS_ "WITH-UNLOCKED-PACKAGES",NULL},
-/* ~PACKAGE_LOCKS */
+{EXT_ "PACKAGE-LOCAL-NICKNAMES","si_package_local_nicknames"},
+{EXT_ "PACKAGE-LOCALLY-NICKNAMED-BY-LIST","si_package_locally_nicknamed_by_list"},
+{EXT_ "ADD-PACKAGE-LOCAL-NICKNAME",NULL},
+{EXT_ "REMOVE-PACKAGE-LOCAL-NICKNAME",NULL},
+{SYS_ "%ADD-PACKAGE-LOCAL-NICKNAME","si_add_package_local_nickname"},
+{SYS_ "%REMOVE-PACKAGE-LOCAL-NICKNAME","si_remove_package_local_nickname"},
 {SYS_ "PACKAGE-HASH-TABLES","si_package_hash_tables"},
 {SYS_ "PATHNAME-TRANSLATIONS","si_pathname_translations"},
 {SYS_ "POINTER","si_pointer"},
@@ -1232,9 +1228,6 @@ cl_symbols[] = {
 {SYS_ "REM-SYSPROP","si_rem_sysprop"},
 {SYS_ "REPLACE-ARRAY","si_replace_array"},
 {SYS_ "ROW-MAJOR-ASET","si_row_major_aset"},
-{EXT_ "RUN-PROGRAM","si_run_program"},
-{EXT_ "TERMINATE-PROCESS","si_terminate_process"},
-{SYS_ "WAIT-FOR-ALL-PROCESSES","si_wait_for_all_processes"},
 {EXT_ "SAFE-EVAL","ECL_NAME(si_safe_eval)"},
 {SYS_ "SCH-FRS-BASE","si_sch_frs_base"},
 {SYS_ "SCHAR-SET","si_char_set"},
@@ -1267,7 +1260,7 @@ cl_symbols[] = {
 {SYS_ "STRUCTUREP","si_structurep"},
 {SYS_ "SVSET","si_svset"},
 {SYS_ "SYMBOL-MACRO",NULL},
-{EXT_ "SYSTEM","ECL_NAME(si_system)"},
+{EXT_ "SYSTEM","si_system"},
 {SYS_ "TERMINAL-INTERRUPT",NULL},
 {SYS_ "TOP-LEVEL",NULL},
 {SYS_ "UNIVERSAL-ERROR-HANDLER",NULL},
@@ -1391,6 +1384,7 @@ cl_symbols[] = {
 {KEY_ "LINK",NULL},
 {KEY_ "LIST-ALL",NULL},
 {KEY_ "LOCAL",NULL},
+{KEY_ "LOCAL-NICKNAMES",NULL},
 {KEY_ "LOCKABLE",NULL},
 {KEY_ "LOAD-TOPLEVEL",NULL},
 {KEY_ "MASK",NULL},
@@ -1779,14 +1773,6 @@ cl_symbols[] = {
 {EXT_ "GET-FINALIZER","si_get_finalizer"},
 {EXT_ "SET-FINALIZER","si_set_finalizer"},
 
-/* #ifdef ECL_RELATIVE_PACKAGE_NAMES */
-{SYS_ "*RELATIVE-PACKAGE-NAMES*",NULL},
-{KEY_ "RELATIVE-PACKAGE-NAMES",NULL},
-{SYS_ "FIND-RELATIVE-PACKAGE",IF_RELPACK("si_find_relative_package")},
-{SYS_ "PACKAGE-PARENT",NULL},
-{SYS_ "PACKAGE-CHILDREN",NULL},
-/* #endif ECL_RELATIVE_PACKAGE_NAMES */
-
 {SYS_ "WRONG-TYPE-ARGUMENT","si_wrong_type_argument"},
 
 {SYS_ "*CURRENT-FORM*",NULL},
@@ -1893,7 +1879,7 @@ cl_symbols[] = {
 {KEY_ "UCS-4LE",NULL},
 
 {EXT_ "LOAD-ENCODING","ECL_NAME(si_load_encoding)"},
-{EXT_ "MAKE-ENCODING","si_make_encoding"},
+{EXT_ "MAKE-ENCODING","ECL_NAME(si_make_encoding)"},
 {EXT_ "ALL-ENCODINGS",NULL},
 
 {KEY_ "US-ASCII",NULL},
@@ -1974,6 +1960,9 @@ cl_symbols[] = {
 
 {KEY_ "ENVIRON",NULL},
 
+/* external-process extension */
+{EXT_ "RUN-PROGRAM","ECL_NAME(si_run_program)"},
+
 {EXT_ "MAKE-EXTERNAL-PROCESS",NULL},
 {EXT_ "EXTERNAL-PROCESS",NULL},
 {EXT_ "EXTERNAL-PROCESS-PID",NULL},
@@ -1981,19 +1970,31 @@ cl_symbols[] = {
 {EXT_ "EXTERNAL-PROCESS-OUTPUT",NULL},
 {EXT_ "EXTERNAL-PROCESS-ERROR-STREAM",NULL},
 {EXT_ "EXTERNAL-PROCESS-STATUS",NULL},
+{EXT_ "EXTERNAL-PROCESS-WAIT",NULL},
+{EXT_ "TERMINATE-PROCESS","ECL_NAME(si_terminate_process)"},
 
 {KEY_ "RUNNING",NULL},
 {KEY_ "EXITED",NULL},
 {KEY_ "SIGNALED",NULL},
 {KEY_ "STOPPED",NULL},
+{KEY_ "RESUMED",NULL},
+/* ~ external-process extension */
 
-{EXT_ "EXTERNAL-PROCESS-WAIT","si_external_process_wait"},
-
-#if defined(ECL_MS_WINDOWS_HOST) || defined(cygwin)
+/* unixsys.d */
+{SYS_ "WAITPID","si_waitpid"},
+#if !defined(ECL_MS_WINDOWS_HOST)
+{SYS_ "KILLPID","si_killpid"},
+#else
+{SYS_ "KILLPID",NULL},
+#endif
+{SYS_ "RUN-PROGRAM-INNER","si_run_program_inner"},
+{SYS_ "SPAWN-SUBPROCESS","si_spawn_subprocess"},
+#if defined(ECL_MS_WINDOWS_HOST)
 {SYS_ "CLOSE-WINDOWS-HANDLE","si_close_windows_handle"},
 #else
 {SYS_ "CLOSE-WINDOWS-HANDLE",NULL},
 #endif
+/* ~ */
 
 {EXT_ "*INVOKE-DEBUGGER-HOOK*",NULL},
 
@@ -2019,6 +2020,7 @@ cl_symbols[] = {
 
 {EXT_ "ARRAY-INDEX",NULL},
 {EXT_ "ANSI-STREAM",NULL},
+{EXT_ "VIRTUAL-STREAM",NULL},
 
 {EXT_ "COMPLEX-ARRAY",NULL},
 
@@ -2247,8 +2249,11 @@ cl_symbols[] = {
 
 {KEY_ "VALUE",NULL},
 {KEY_ "KEY-AND-VALUE",NULL},
+{KEY_ "KEY-OR-VALUE",NULL},
 {KEY_ "WEAKNESS",NULL},
 {EXT_ "HASH-TABLE-WEAKNESS","si_hash_table_weakness"},
+{KEY_ "SYNCHRONIZED",NULL},
+{EXT_ "HASH-TABLE-SYNCHRONIZED-P","si_hash_table_synchronized_p"},
 
 {EXT_ "TRULY-THE",NULL},
 {EXT_ "CHECKED-VALUE",NULL},

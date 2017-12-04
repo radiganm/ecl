@@ -550,7 +550,6 @@ ecl_array_allocself(cl_object x)
   }
 #endif
   case ecl_aet_bc: {
-    cl_index elt_size = 1;
     x->vector.self.bc = (ecl_base_char *)ecl_alloc_atomic(d+1);
     /* Null terminate the string */
     x->vector.self.bc[d] = 0;
@@ -752,7 +751,7 @@ cl_array_element_type(cl_object a)
 void
 ecl_displace(cl_object from, cl_object to, cl_object offset)
 {
-  cl_index j;
+  cl_fixnum j;
   void *base;
   cl_elttype totype, fromtype;
   fromtype = from->array.elttype;
@@ -876,7 +875,7 @@ ecl_array_rank(cl_object a)
   case t_bitvector:
     return 1;
   default:
-    FEwrong_type_only_arg(@[array-dimension], a, @[array]);
+    FEwrong_type_only_arg(@[array-rank], a, @[array]);
   }
 }
 
@@ -1052,7 +1051,7 @@ cl_array_has_fill_pointer_p(cl_object a)
     r = ECL_ARRAY_HAS_FILL_POINTER_P(a)? ECL_T : ECL_NIL;
     break;
   default:
-    FEwrong_type_nth_arg(@[array-has-fill-pointer-p],1,a,@[array]);
+    FEwrong_type_only_arg(@[array-has-fill-pointer-p],a,@[array]);
   }
   ecl_return1(the_env, r);
 }
@@ -1065,7 +1064,7 @@ cl_fill_pointer(cl_object a)
     FEwrong_type_only_arg(@[fill-pointer], a, @[vector]);
   if (ecl_unlikely(!ECL_ARRAY_HAS_FILL_POINTER_P(a))) {
     const char *type = "(AND VECTOR (SATISFIES ARRAY-HAS-FILL-POINTER-P))";
-    FEwrong_type_nth_arg(@[fill-pointer], 1, a, ecl_read_from_cstring(type));
+    FEwrong_type_only_arg(@[fill-pointer], a, ecl_read_from_cstring(type));
   }
   ecl_return1(the_env, ecl_make_fixnum(a->vector.fillp));
 }

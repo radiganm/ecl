@@ -1,5 +1,7 @@
 @node Types and classes
 @section Types and classes
+@lspindex single-float
+@lspindex double-float
 
 ECL defines the following additional built-in classes in the @code{CL} package:
 
@@ -8,37 +10,18 @@ ECL defines the following additional built-in classes in the @code{CL} package:
 @item @code{double-float}
 @end itemize
 
+
 @subsection C Reference
+@subsubsection ANSI Dictionary
+Common Lisp and C equivalence
 
-@subsection ANSI Dictionary
-@multitable @columnfractions 0.3 0.7
-@headitem Lisp symbol
-@tab C/C++ function
-
-@lspindex coerce
-@cppindex cl_coerce
-@ansidict{@clhs{f_coerce.htm,coerce},
-@code{cl_object cl_coerce (cl_object object, cl_object result-type)}}
-
-@lspindex subtypep
-@cppindex cl_subtypep
-@ansidict{@clhs{f_subtpp.htm,subtypep},
-@code{cl_object cl_subtypep (cl_narg narg, cl_object type1, cl_object type2, ...)}}
-
-@lspindex type-of
-@cppindex cl_type-of
-@ansidict{@clhs{f_tp_of.htm,type-of},
-@code{cl_object cl_type-of (cl_object object)}}
-
-@lspindex typep
-@cppindex cl_typep
-@ansidict{@clhs{f_typep.htm,typep},
-@code{cl_object cl_typep (cl_narg narg, cl_object object, cl_object type_specifier, ...)}}
-
-@lspindex type-error-datum
-@ansidict{@clhs{f_tp_err.htm,type-error-datum}, @ocl{}}
-
-@lspindex type-error-expected-type
-@ansidict{@clhs{f_tp_err.htm,type-error-expected-type}, @ocl{}}
-
+@subsubheading Synopsis
+@multitable @columnfractions .3 .7
+@headitem Lisp symbol @tab C function
+@item @clhs{f_coerce.htm,coerce} @tab cl_object cl_coerce(cl_object object, cl_object result_type)
+@item @clhs{f_subtpp.htm,subtypep} @tab cl_object cl_subtypep(cl_narg narg, cl_object type1, cl_object type2, ...)
+@item @clhs{f_tp_of.htm,type-of} @tab cl_object cl_type_of(cl_object object)
+@item @clhs{f_typep.htm,typep} @tab cl_object cl_typep(cl_narg narg, cl_object object, cl_object type_specifier, ...)
+@item @clhs{f_tp_err.htm,type-error-datum} @tab [Only in Common Lisp]
+@item @clhs{f_tp_err.htm,type-error-expected-type} @tab [Only in Common Lisp]
 @end multitable

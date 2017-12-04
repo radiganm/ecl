@@ -17,17 +17,17 @@
 @c * TCP Streams::
 @c * Series::
 * Tree walker::
-@c * Local package nicknames::
+* Package local nicknames::
 @c * Hierarchical packages::
 * Package locks::
 * CDR Extensions::
 @end menu
 
-@ System building
+@c System building
 @include extensions/building.txi
 
-@node Operating System Interface
-@section Operating System Interface
+@c Operating System Interface
+@include extensions/osi.txi
 
 @c Foreign function interface
 @include extensions/ffi.txi
@@ -38,14 +38,14 @@
 @c @node Green Threads
 @c @section Green Threads
 
-@node Signals and Interrupts
-@section Signals and Interrupts
+@c Signals and Interrupts
+@include extensions/signals.txi
 
-@node Memory Management
-@section Memory Management
+@c Memory Management
+@include extensions/memory.txi
 
-@node Meta-Object Protocol (MOP)
-@section Meta-Object Protocol (MOP)
+@c Meta-Object Protocol (MOP)
+@include extensions/mop.txi
 
 @c @node Continuations
 @c @section Continuations

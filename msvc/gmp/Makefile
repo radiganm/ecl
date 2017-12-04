@@ -615,6 +615,7 @@ msvc-build: build.vc8\config-vc8.$(MPN_TYPE) build.vc8\gmp.h
 
 clean:
 	-erase mpn\generic\*.obj
+	-erase mpn\amd64i\*.obj
 	-erase mpn\*.obj
 	-erase mpz\*.obj
 	-erase *.obj
@@ -628,3 +629,4 @@ clean:
 	-erase gmp.h
 	-erase msvc-build
 	-erase *.exe *.manifest
+	-erase *.ilk *.pdb

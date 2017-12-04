@@ -174,24 +174,80 @@
             "Not-file stream would cause internal error on this ECL (skipped)")))
 
 
-;;;; Author:   Daniel Kochmański
-;;;; Created:  2016-09-07
-;;;; Contains: External process interaction API
-;;;;
-(test external-process.0001.run-program
-  (let ((p (nth-value 2 (ext:run-program #-windows "sleep"
-                                         #+windows "timeout"
-                                         (list "3") :wait nil))))
-    (is (eql :running (ext:external-process-wait p nil))
-        "process doesn't run")
-    (ext:terminate-process p)
-    (sleep 1)
-    (multiple-value-bind (status code)
-        (ext:external-process-wait p nil)
-      (is (eql :signaled status)
-          "status is ~s, should be ~s" status :signalled)
-      (is (eql ext:+sigterm+ code)
-          "signal code is ~s, should be ~s" code ext:+sigterm+))
-    (finishes (ext:terminate-process p))))
+;;; Date: 2016-12-20
+;;; Reported by: Kris Katterjohn
+;;; Fixed: Daniel Kochmański
+;;; Description:
+;;;
+;;;   atan signalled `division-by-zero' exception when the second
+;;;   argument was signed zero. Also inconsistent behavior on invalid
+;;;   operation (atan 0.0 0.0).
+;;;
+;;; Bug: https://gitlab.com/embeddable-common-lisp/ecl/issues/329
+(test mix.0012.atan-signed-zero
+  (finishes (atan 1.0 -0.0)))
 
 
+;;; Date: 2016-12-21
+;;; Description:
+;;;
+;;;   `sleep' sues `ECL_WITHOUT_FPE_BEGIN' which didn't restore fpe
+;;;   correctly.
+;;;
+;;; Bug: https://gitlab.com/embeddable-common-lisp/ecl/issues/317
+(test mix.0013.sleep-without-fpe
+  (sleep 0.1)
+  (let ((a 1.0)
+        (b 0.0))
+    ;; nb: normally operation signals `division-by-zero', but OSX
+    ;; signals `floating-point-overflow'. It's OK I suppose.
+    (signals arithmetic-error (/ a b))))
+
+
+;;; Data: 2017-01-20
+;;; Description:
+;;;
+;;;   `dolist' macroexpansion yields result which doesn't have a
+;;;   correct scope.
+;;;
+;;; Bug: https://gitlab.com/embeddable-common-lisp/ecl/issues/348
+(test mix.0014.dolist
+  (is-false
+   (nth-value 1
+     (compile nil
+              (lambda ()
+                (dolist (s '("foo" "bar" "baz") s)
+                  (declare (type string s))
+                  (check-type s string)
+                  (format nil "~s" s))))))
+  (finishes (eval '(dolist (e '(1 2 3 4) e)
+                    (print e)
+                    (go :next)
+                    (print 'skip)
+                    :next))))
+
+
+;;; Data: 2017-07-02
+;;; Description:
+;;;
+;;;   Function `ecl_new_binding_index' called `si_set_finalizer',
+;;;   which resetted `env->nvalues' leading to invalid binding in mvb
+;;;   during the first function run.
+;;;
+;;; Bug: https://gitlab.com/embeddable-common-lisp/ecl/issues/233
+(test mix.0015.mvb
+  (with-compiler ("aux-cl-0003.lsp" :load t)
+    `(progn
+       (defvar mix.0015.v1 'booya)
+       (defun mix.0015.fun ()
+         (let ((share_t))
+           (multiple-value-bind (mix.0015.v1 woops)
+               (case share_t
+                 ((nil)
+                  (values 1 2)))
+             woops)))))
+  (ignore-errors
+    (delete-file "aux-cl-0003.lsp")
+    (delete-file "aux-cl-0003.fas")
+    (delete-file "aux-cl-0003.fasc"))
+  (is-eql 2 (mix.0015.fun)))

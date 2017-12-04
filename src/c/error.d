@@ -61,6 +61,27 @@ ecl_internal_error(const char *s)
   abort();
 }
 
+#ifdef ECL_THREADS
+void
+ecl_thread_internal_error(const char *s)
+{
+  int saved_errno = errno;
+  fprintf(stderr, "\nInternal thread error in:\n%s\n", s);
+  if (saved_errno) {
+    fprintf(stderr, "  [%d: %s]\n", saved_errno,
+            strerror(saved_errno));
+  }
+  fprintf(stderr,
+          "\nDid you forget to call `ecl_import_current_thread'?\n"
+          "Exitting thread.\n");
+  fflush(stderr);
+#ifdef ECL_WINDOWS_THREADS
+  ExitThread(0);
+#else
+  pthread_exit(NULL);
+#endif
+}
+#endif
 
 void
 ecl_unrecoverable_error(cl_env_ptr the_env, const char *message)
@@ -104,12 +125,15 @@ void
 FEerror(const char *s, int narg, ...)
 {
   ecl_va_list args;
+  cl_object rest;
   ecl_va_start(args, narg, narg, 0);
   ecl_enable_interrupts();
+  rest = cl_grab_rest_args(args);
+  ecl_va_end(args);
   funcall(4, @'si::universal-error-handler',
           ECL_NIL,                    /*  not correctable  */
           make_constant_base_string(s),    /*  condition text  */
-          cl_grab_rest_args(args));
+          rest);
   _ecl_unexpected_return();
 }
 
@@ -131,32 +155,6 @@ CEerror(cl_object c, const char *err, int narg, ...)
 
 void
 FEprogram_error(const char *s, int narg, ...)
-{
-  cl_object real_args, text;
-  ecl_va_list args;
-  ecl_va_start(args, narg, narg, 0);
-  text = make_constant_base_string(s);
-  real_args = cl_grab_rest_args(args);
-  if (cl_boundp(@'si::*current-form*') != ECL_NIL) {
-    /* When FEprogram_error is invoked from the compiler, we can
-     * provide information about the offending form.
-     */
-    cl_object stmt = ecl_symbol_value(@'si::*current-form*');
-    if (stmt != ECL_NIL) {
-      real_args = @list(3, stmt, text, real_args);
-      text = make_constant_base_string("In form~%~S~%~?");
-    }
-  }
-  si_signal_simple_error(4, 
-                         @'program-error', /* condition name */
-                         ECL_NIL, /* not correctable */
-                         text,
-                         real_args);
-  _ecl_unexpected_return();
-}
-
-void
-FEprogram_error_noreturn(const char *s, int narg, ...)
 {
   cl_object real_args, text;
   ecl_va_list args;
@@ -411,9 +409,21 @@ FEinvalid_variable(const char *s, cl_object obj)
 }
 
 void
+FEillegal_variable_name(cl_object v)
+{
+  FEprogram_error("Not a valid variable name ~S.", 1, v);
+}
+
+void
 FEassignment_to_constant(cl_object v)
 {
   FEprogram_error("SETQ: Tried to assign a value to the constant ~S.", 1, v);
+}
+
+void
+FEbinding_a_constant(cl_object v)
+{
+  FEprogram_error("The constant ~S is being bound.", 1, v);
 }
 
 void

@@ -147,7 +147,7 @@ set_library_error(cl_object block) {
   cl_object output;
   ecl_disable_interrupts();
 #ifdef HAVE_DLFCN_H
-  output = make_base_string_copy(dlerror());
+  output = ecl_cstring_to_base_string_or_nil(dlerror());
 #endif
 #ifdef HAVE_MACH_O_DYLD_H
   {
@@ -284,7 +284,6 @@ cl_object
 ecl_library_open(cl_object filename, bool force_reload) {
   cl_object block;
   bool self_destruct = 0;
-  char *filename_string;
 
   /* Coerces to a file name but does not merge with cwd */
   filename = coerce_to_physical_pathname(filename);

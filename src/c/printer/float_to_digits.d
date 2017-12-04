@@ -54,7 +54,10 @@ setup(cl_object number, float_approx *approx)
     min_e = LDBL_MIN_EXP;
     limit_f = (number->longfloat.value ==
                ldexpl(FLT_RADIX, LDBL_MANT_DIG-1));
+    break;
 #endif
+  default:
+	 break;
   }
   approx->low_ok = approx->high_ok = ecl_evenp(f);
   if (e > 0) {
@@ -176,7 +179,6 @@ change_precision(float_approx *approx, cl_object position, cl_object relativep)
     {
       cl_object e1 = cl_expt(PRINT_BASE, position);
       cl_object e2 = ecl_divide(e1, ecl_make_fixnum(2));
-      cl_object e3 = cl_expt(PRINT_BASE, k); 
       if (ecl_greatereq(ecl_plus(approx->r, ecl_times(approx->s, e1)),
                         ecl_times(approx->s, e2)))
         position = ecl_one_minus(position);

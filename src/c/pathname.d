@@ -564,6 +564,7 @@ ecl_parse_namestring(cl_object s, cl_index start, cl_index end, cl_index *ep,
   if (start == end) {
     host = device = path = name = type = aux = version = @'nil';
     logical = 0;
+    *ep = end;
     goto make_it;
   }
   /* We first try parsing as logical-pathname. In case of
@@ -1409,7 +1410,7 @@ ecl_string_match(cl_object s, cl_index j, cl_index ls,
     }
     case '?':
       /* Match any character */
-      if (j > ls) return FALSE;
+      if (j >= ls) return FALSE;
       i++; j++;
       break;
     case '\\':

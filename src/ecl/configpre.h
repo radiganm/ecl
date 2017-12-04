@@ -39,9 +39,6 @@
 /* Define if your newline is CRLF */
 #undef ECL_NEWLINE_IS_CRLF
 
-/* Hierarchical package names */
-#undef ECL_RELATIVE_PACKAGE_NAMES
-
 /* ECL_RWLOCK */
 #undef ECL_RWLOCK
 
@@ -132,7 +129,7 @@
 /* Define to 1 if you have the <fcntl.h> header file. */
 #undef HAVE_FCNTL_H
 
-/* Define to 1 if you have the `feenableexcept' function. */
+/* feenableexcept is available */
 #undef HAVE_FEENABLEEXCEPT
 
 /* Define to 1 if you have the <fenv.h> header file. */

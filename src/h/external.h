@@ -251,9 +251,6 @@ struct cl_core_struct {
         cl_object rehash_size;
         cl_object rehash_threshold;
 
-        cl_object external_processes;
-        cl_object external_processes_lock;
-
         cl_object known_signals;
 };
 
@@ -556,10 +553,12 @@ extern ECL_API cl_object cl_error _ECL_ARGS((cl_narg narg, cl_object eformat, ..
 extern ECL_API cl_object cl_cerror _ECL_ARGS((cl_narg narg, cl_object cformat, cl_object eformat, ...));
 
 extern ECL_API void ecl_internal_error(const char *s) ecl_attr_noreturn;
+#ifdef ECL_THREADS
+extern ECL_API void ecl_thread_internal_error(const char *s) ecl_attr_noreturn;
+#endif
 extern ECL_API void ecl_unrecoverable_error(cl_env_ptr the_env, const char *message) ecl_attr_noreturn;
 extern ECL_API void ecl_cs_overflow(void) /*ecl_attr_noreturn*/;
 extern ECL_API void FEprogram_error(const char *s, int narg, ...) ecl_attr_noreturn;
-extern ECL_API void FEprogram_error_noreturn(const char *s, int narg, ...) ecl_attr_noreturn;
 extern ECL_API void FEcontrol_error(const char *s, int narg, ...) ecl_attr_noreturn;
 extern ECL_API void FEreader_error(const char *s, cl_object stream, int narg, ...) ecl_attr_noreturn;
 #define FEparse_error FEreader_error
@@ -577,7 +576,9 @@ extern ECL_API void FEwrong_index(cl_object function, cl_object a, int which, cl
 extern ECL_API void FEunbound_variable(cl_object sym) ecl_attr_noreturn;
 extern ECL_API void FEinvalid_macro_call(cl_object obj) ecl_attr_noreturn;
 extern ECL_API void FEinvalid_variable(const char *s, cl_object obj) ecl_attr_noreturn;
+extern ECL_API void FEillegal_variable_name(cl_object) ecl_attr_noreturn;
 extern ECL_API void FEassignment_to_constant(cl_object v) ecl_attr_noreturn;
+extern ECL_API void FEbinding_a_constant(cl_object v) ecl_attr_noreturn;
 extern ECL_API void FEundefined_function(cl_object fname) ecl_attr_noreturn;
 extern ECL_API void FEinvalid_function(cl_object obj) ecl_attr_noreturn;
 extern ECL_API void FEinvalid_function_name(cl_object obj) ecl_attr_noreturn;
@@ -689,7 +690,7 @@ extern ECL_API cl_object cl_stream_external_format(cl_object strm);
 extern ECL_API cl_object cl_file_length(cl_object strm);
 extern ECL_API cl_object si_get_string_input_stream_index(cl_object strm);
 extern ECL_API cl_object si_make_string_output_stream_from_string(cl_object strng);
-extern ECL_API cl_object si_copy_stream(cl_object in, cl_object out);
+extern ECL_API cl_object si_copy_stream(cl_object in, cl_object out, cl_object wait);
 extern ECL_API cl_object cl_open_stream_p(cl_object strm);
 extern ECL_API cl_object cl_make_broadcast_stream _ECL_ARGS((cl_narg narg, ...));
 extern ECL_API cl_object cl_broadcast_stream_streams(cl_object strm);
@@ -734,8 +735,8 @@ extern ECL_API cl_object ecl_file_position_set(cl_object strm, cl_object disp);
 extern ECL_API cl_object ecl_file_length(cl_object strm);
 extern ECL_API int ecl_file_column(cl_object strm);
 extern ECL_API cl_fixnum ecl_normalize_stream_element_type(cl_object element);
-extern ECL_API cl_object ecl_make_stream_from_fd(cl_object fname, int fd, enum ecl_smmode smm, cl_fixnum byte_size, int flags, cl_object external_format);
 extern ECL_API cl_object ecl_make_stream_from_FILE(cl_object fname, void *fd, enum ecl_smmode smm, cl_fixnum byte_size, int flags, cl_object external_format);
+extern ECL_API cl_object ecl_make_stream_from_fd(cl_object fname, int fd, enum ecl_smmode smm, cl_fixnum byte_size, int flags, cl_object external_format);
 extern ECL_API cl_object si_file_stream_fd(cl_object s);
 extern ECL_API int ecl_stream_to_handle(cl_object s, bool output);
 
@@ -808,6 +809,7 @@ extern ECL_API cl_object si_hash_equalp _ECL_ARGS((cl_narg narg, ...));
 extern ECL_API cl_object si_hash_table_content(cl_object ht);
 extern ECL_API cl_object si_hash_table_fill(cl_object ht, cl_object values);
 extern ECL_API cl_object si_hash_table_weakness(cl_object ht);
+extern ECL_API cl_object si_hash_table_synchronized_p(cl_object ht);
 
 extern ECL_API cl_object ecl_sethash(cl_object key, cl_object hashtable, cl_object value);
 extern ECL_API cl_object ecl_gethash(cl_object key, cl_object hash);
@@ -945,7 +947,6 @@ typedef enum {
         ECL_OPT_TRAP_SIGILL,
         ECL_OPT_TRAP_SIGBUS,
         ECL_OPT_TRAP_SIGPIPE,
-        ECL_OPT_TRAP_SIGCHLD,
         ECL_OPT_TRAP_INTERRUPT_SIGNAL,
         ECL_OPT_SIGNAL_HANDLING_THREAD,
         ECL_OPT_SIGNAL_QUEUE_SIZE,
@@ -1286,6 +1287,10 @@ extern ECL_API cl_object cl_package_nicknames(cl_object p);
 extern ECL_API cl_object cl_package_use_list(cl_object p);
 extern ECL_API cl_object cl_package_used_by_list(cl_object p);
 extern ECL_API cl_object cl_package_shadowing_symbols(cl_object p);
+extern ECL_API cl_object si_package_local_nicknames(cl_object p);
+extern ECL_API cl_object si_package_locally_nicknamed_by_list(cl_object p);
+extern ECL_API cl_object si_add_package_local_nickname(cl_object n, cl_object p1, cl_object p2);
+extern ECL_API cl_object si_remove_package_local_nickname(cl_object n, cl_object p);
 extern ECL_API cl_object cl_list_all_packages(void);
 extern ECL_API cl_object si_package_hash_tables(cl_object p);
 extern ECL_API cl_object si_package_lock(cl_object p, cl_object t);
@@ -1303,7 +1308,7 @@ extern ECL_API cl_object cl_shadow _ECL_ARGS((cl_narg narg, cl_object symbols, .
 extern ECL_API cl_object cl_use_package _ECL_ARGS((cl_narg narg, cl_object pack, ...));
 extern ECL_API cl_object cl_unuse_package _ECL_ARGS((cl_narg narg, cl_object pack, ...));
 
-extern ECL_API cl_object ecl_make_package(cl_object n, cl_object ns, cl_object ul);
+extern ECL_API cl_object ecl_make_package(cl_object n, cl_object ns, cl_object ul, cl_object lns);
 extern ECL_API cl_object ecl_rename_package(cl_object x, cl_object n, cl_object ns);
 extern ECL_API cl_object ecl_find_package_nolock(cl_object n);
 extern ECL_API cl_object ecl_find_package(const char *p);
@@ -1888,9 +1893,18 @@ extern ECL_API void ecl_check_pending_interrupts(cl_env_ptr env);
 extern ECL_API cl_object si_system(cl_object cmd);
 extern ECL_API cl_object si_make_pipe();
 extern ECL_API cl_object si_run_program _ECL_ARGS((cl_narg narg, cl_object command, cl_object args, ...));
-extern ECL_API cl_object si_external_process_wait _ECL_ARGS((cl_narg narg, cl_object h, ...));
 extern ECL_API cl_object si_close_windows_handle(cl_object h);
 extern ECL_API cl_object si_terminate_process _ECL_ARGS((cl_narg narg, cl_object process, ...));
+extern ECL_API cl_object si_waitpid(cl_object pid, cl_object wait);
+extern ECL_API cl_object si_killpid(cl_object pid, cl_object signal);
+
+extern ECL_API cl_object si_run_program_inner
+(cl_object command, cl_object argv, cl_object environ);
+
+extern ECL_API cl_object si_spawn_subprocess
+(cl_object command, cl_object argv, cl_object environ,
+ cl_object input, cl_object output, cl_object error);
+
 
 /* unicode -- no particular file, but we group these changes here */
 
@@ -2009,6 +2023,7 @@ extern ECL_API cl_object cl_get_decoded_time();
 extern ECL_API cl_object cl_ensure_directories_exist _ECL_ARGS((cl_narg narg, cl_object V1, ...));
 extern ECL_API cl_object si_simple_program_error _ECL_ARGS((cl_narg narg, cl_object format, ...)) ecl_attr_noreturn;
 extern ECL_API cl_object si_signal_simple_error _ECL_ARGS((cl_narg narg, cl_object condition, cl_object continuable, cl_object format, cl_object args, ...));
+extern ECL_API cl_object si_make_stream_from_fd _ECL_ARGS((cl_narg narg, cl_object fd, cl_object direction, ...));
 
 /* module.lsp */
 
@@ -2045,7 +2060,6 @@ extern ECL_API cl_object cl_deposit_field(cl_object V1, cl_object V2, cl_object 
 extern ECL_API cl_object cl_find_all_symbols(cl_object V1);
 extern ECL_API cl_object cl_apropos _ECL_ARGS((cl_narg arg, cl_object V1, ...));
 extern ECL_API cl_object cl_apropos_list _ECL_ARGS((cl_narg arg, cl_object V1, ...));
-extern ECL_API cl_object si_find_relative_package _ECL_ARGS((cl_narg narg, cl_object pack_name, ...));
 
 /* predlib.lsp */
 

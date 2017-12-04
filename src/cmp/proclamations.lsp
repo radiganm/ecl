@@ -443,6 +443,18 @@
 (proclamation si:package-hash-tables (package-designator)
                    (values hash-table hash-table list) :reader)
 (proclamation ext:package-lock (package-designator gen-bool) package)
+(proclamation ext:package-local-nicknames
+ (package-designator) list :no-side-effects)
+(proclamation ext:package-locally-nicknamed-by-list
+ (package-designator) list :no-side-effects)
+(proclamation si:%add-package-local-nickname
+ (string-designator package-designator package-designator) package)
+(proclamation si:%remove-package-local-nickname
+ (string-designator package-designator) list)
+(proclamation ext:add-package-local-nickname
+ (string-designator package-designator &optional package-designator) package)
+(proclamation ext:remove-package-local-nickname
+ (string-designator &optional package-designator) list)
 
 ;;;
 ;;; 12. NUMBERS
@@ -1140,8 +1152,8 @@
 (proclamation si:open-unix-socket-stream (string) stream)
 #+wants-sockets
 (proclamation si:lookup-host-entry (t) (values (or null string) list list))
-(proclamation si:copy-stream (stream stream) t)
-(proclamation si:make-encoding (t) t)
+(proclamation si:copy-stream (stream stream wait) t)
+(proclamation si:make-encoding (t) hash-table)
 (proclamation si:load-encoding (t) t)
 
 ;;;
@@ -1329,6 +1341,18 @@
               (values (or null two-way-stream)
                       (or null integer)
                       ext:external-process))
+(proclamation ext:file-stream-fd (stream) fixnum)
+(proclamation ext:make-stream-from-fd (fixnum keyword &key) stream)
+
+(proclamation si:waitpid (fixnum gen-bool) (values
+                                            (or null keyword)
+                                            (or null fixnum)
+                                            (or null fixnum)))
+(proclamation si:killpid (fixnum fixnum) fixnum)
+(proclamation si:run-program-inner (string (or list string) list)
+              (values file-stream integer))
+(proclamation si:spawn-subprocess (string (or list string) list t t t)
+              (values (or null integer) fixnum fixnum fixnum))
 (proclamation ext:terminate-process (t &optional gen-bool) null)
 
 (proclamation ext:make-weak-pointer (t) ext:weak-pointer :no-side-effects)

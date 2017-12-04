@@ -325,6 +325,10 @@ and is not adjustable."
 (deftype array-index ()
   '(integer 0 #.(1- array-dimension-limit)))
 
+(deftype ext:virtual-stream ()
+  '(or string-stream
+    #+clos-streams gray:fundamental-stream))
+
 ;;************************************************************
 ;;                      TYPEP
 ;;************************************************************
@@ -1313,9 +1317,11 @@ if not possible."
                (EXT:SEQUENCE-STREAM)
                (EXT:ANSI-STREAM (OR BROADCAST-STREAM CONCATENATED-STREAM ECHO-STREAM
                                  FILE-STREAM STRING-STREAM SYNONYM-STREAM TWO-WAY-STREAM
-                                 EXT:SEQUENCE-STREAM
-                                 #+clos-streams GRAY:FUNDAMENTAL-STREAM))
-               (STREAM EXT:ANSI-STREAM)
+                                 EXT:SEQUENCE-STREAM))
+               #+clos-streams (GRAY:FUNDAMENTAL-STREAM)
+               (STREAM (OR EXT:ANSI-STREAM
+                        #+clos-streams GRAY:FUNDAMENTAL-STREAM))
+               (EXT:VIRTUAL-STREAM (OR STRING-STREAM #+clos-streams GRAY:FUNDAMENTAL-STREAM))
 
                (READTABLE)
                #+threads (MP::PROCESS)
